@@ -237,8 +237,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Bookings routes
   app.get("/api/bookings", requireAuth, async (req: Request, res: Response) => {
     try {
-      const propertyId = req.query.propertyId as string | undefined;
-      const bookings = await storage.getBookings(propertyId);
+      const filters = {
+        propertyId: req.query.propertyId as string | undefined,
+        roomId: req.query.roomId as string | undefined,
+        status: req.query.status as string | undefined,
+        guestName: req.query.guestName as string | undefined,
+        checkInFrom: req.query.checkInFrom as string | undefined,
+        checkInTo: req.query.checkInTo as string | undefined,
+      };
+      
+      const bookings = await storage.getBookings(filters);
       res.json(bookings);
     } catch (error: any) {
       res.status(500).json({ error: error.message });

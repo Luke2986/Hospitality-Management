@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { db } from "./db";
 import { 
   users, 
@@ -40,7 +40,14 @@ export interface IStorage {
   deleteRoom(id: string): Promise<void>;
 
   // Bookings
-  getBookings(propertyId?: string): Promise<Booking[]>;
+  getBookings(filters?: {
+    propertyId?: string;
+    roomId?: string;
+    status?: string;
+    guestName?: string;
+    checkInFrom?: string;
+    checkInTo?: string;
+  }): Promise<Booking[]>;
   getBooking(id: string): Promise<Booking | undefined>;
   createBooking(booking: InsertBooking): Promise<Booking>;
   updateBooking(id: string, data: Partial<InsertBooking>): Promise<Booking | undefined>;
@@ -133,9 +140,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Bookings
-  async getBookings(propertyId?: string): Promise<Booking[]> {
-    if (propertyId) {
-      return db.select().from(bookings).where(eq(bookings.propertyId, propertyId)).orderBy(desc(bookings.createdAt));
+  async getBookings(filters?: {
+    propertyId?: string;
+    roomId?: string;
+    status?: string;
+    guestName?: string;
+    checkInFrom?: string;
+    checkInTo?: string;
+  }): Promise<Booking[]> {
+    const conditions = [];
+    
+    if (filters?.propertyId) {
+      conditions.push(eq(bookings.propertyId, filters.propertyId));
+    }
+    if (filters?.roomId) {
+      conditions.push(eq(bookings.roomId, filters.roomId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(bookings.status, filters.status));
+    }
+    if (filters?.guestName) {
+      conditions.push(sql`${bookings.guestName} ILIKE ${`%${filters.guestName}%`}`);
+    }
+    if (filters?.checkInFrom) {
+      conditions.push(sql`${bookings.checkIn} >= ${filters.checkInFrom}`);
+    }
+    if (filters?.checkInTo) {
+      conditions.push(sql`${bookings.checkIn} <= ${filters.checkInTo}`);
+    }
+    
+    if (conditions.length > 0) {
+      return db.select().from(bookings).where(and(...conditions)).orderBy(desc(bookings.createdAt));
     }
     return db.select().from(bookings).orderBy(desc(bookings.createdAt));
   }
