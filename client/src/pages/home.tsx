@@ -9,21 +9,21 @@ export default function Home() {
         <div className="flex flex-col items-center justify-center min-h-screen text-center space-y-8">
           <div className="space-y-4">
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight">
-              Hospitality Management
-              <span className="block text-primary mt-2">Made Simple</span>
+              Gestione Ricettiva
+              <span className="block text-primary mt-2">Resa Semplice</span>
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              The complete solution for managing your B&B, agriturismo, or vacation rental.
-              Track bookings, showcase events, and grow your business.
+              La soluzione completa per gestire il tuo B&B, agriturismo o casa vacanze.
+              Monitora prenotazioni, mostra eventi e fai crescere il tuo business.
             </p>
           </div>
 
           <div className="flex gap-4">
             <Button size="lg" asChild data-testid="button-get-started">
-              <Link href="/signup">Get Started</Link>
+              <Link href="/signup">Inizia</Link>
             </Button>
             <Button size="lg" variant="outline" asChild data-testid="button-login">
-              <Link href="/login">Log In</Link>
+              <Link href="/login">Accedi</Link>
             </Button>
           </div>
 
@@ -31,23 +31,23 @@ export default function Home() {
             {[
               {
                 icon: Building2,
-                title: "Property Management",
-                description: "Manage multiple properties with ease",
+                title: "Gestione Proprietà",
+                description: "Gestisci più proprietà con facilità",
               },
               {
                 icon: BookOpen,
-                title: "Booking System",
-                description: "Accept and track reservations",
+                title: "Sistema di Prenotazione",
+                description: "Accetta e monitora le prenotazioni",
               },
               {
                 icon: Calendar,
-                title: "Event Calendar",
-                description: "Showcase local events to guests",
+                title: "Calendario Eventi",
+                description: "Mostra eventi locali agli ospiti",
               },
               {
                 icon: TrendingUp,
-                title: "Analytics",
-                description: "Track performance and revenue",
+                title: "Statistiche",
+                description: "Monitora prestazioni e ricavi",
               },
             ].map((feature) => (
               <div key={feature.title} className="flex flex-col items-center space-y-2">

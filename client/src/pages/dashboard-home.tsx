@@ -40,25 +40,25 @@ export default function DashboardHome() {
 
   const stats = [
     {
-      title: "Bookings This Month",
+      title: "Prenotazioni Questo Mese",
       value: thisMonth.length,
       icon: Calendar,
       color: "text-primary",
     },
     {
-      title: "Pending Bookings",
+      title: "Prenotazioni In Attesa",
       value: pendingBookings.length,
       icon: Clock,
       color: "text-warning",
     },
     {
-      title: "Confirmed Bookings",
+      title: "Prenotazioni Confermate",
       value: confirmedBookings.length,
       icon: CheckCircle,
       color: "text-success",
     },
     {
-      title: "Revenue This Month",
+      title: "Ricavi Questo Mese",
       value: `€${totalRevenue.toFixed(2)}`,
       icon: DollarSign,
       color: "text-accent",
@@ -84,7 +84,7 @@ export default function DashboardHome() {
     <div className="p-8 space-y-8">
       <div>
         <h1 className="text-3xl font-bold" data-testid="text-dashboard-title">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back! Here's your overview</p>
+        <p className="text-muted-foreground">Bentornato! Ecco la tua panoramica</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -108,12 +108,12 @@ export default function DashboardHome() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Upcoming Check-ins</CardTitle>
-            <CardDescription>Next 3 days</CardDescription>
+            <CardTitle>Prossimi Check-in</CardTitle>
+            <CardDescription>Prossimi 3 giorni</CardDescription>
           </CardHeader>
           <CardContent>
             {upcomingCheckIns.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No upcoming check-ins</p>
+              <p className="text-sm text-muted-foreground">Nessun check-in in programma</p>
             ) : (
               <div className="space-y-4">
                 {upcomingCheckIns.slice(0, 5).map((booking) => (
@@ -125,7 +125,7 @@ export default function DashboardHome() {
                       </p>
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {booking.guestsCount} {booking.guestsCount === 1 ? "guest" : "guests"}
+                      {booking.guestsCount} {booking.guestsCount === 1 ? "ospite" : "ospiti"}
                     </div>
                   </div>
                 ))}
@@ -136,12 +136,12 @@ export default function DashboardHome() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Upcoming Events</CardTitle>
-            <CardDescription>Next 7 days</CardDescription>
+            <CardTitle>Prossimi Eventi</CardTitle>
+            <CardDescription>Prossimi 7 giorni</CardDescription>
           </CardHeader>
           <CardContent>
             {upcomingEvents.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No upcoming events</p>
+              <p className="text-sm text-muted-foreground">Nessun evento in programma</p>
             ) : (
               <div className="space-y-4">
                 {upcomingEvents.slice(0, 5).map((event) => (
