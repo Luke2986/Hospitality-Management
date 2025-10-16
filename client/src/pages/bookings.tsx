@@ -4,16 +4,46 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
-import type { Booking } from "@shared/schema";
-import { Check, X, Mail } from "lucide-react";
+import type { Booking, Room } from "@shared/schema";
+import { Check, X, Mail, Search, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 export default function Bookings() {
   const { toast } = useToast();
+  const [filters, setFilters] = useState({
+    guestName: "",
+    status: "",
+    roomId: "",
+    checkInFrom: "",
+    checkInTo: "",
+  });
+
+  const queryParams = new URLSearchParams();
+  if (filters.guestName) queryParams.set("guestName", filters.guestName);
+  if (filters.status) queryParams.set("status", filters.status);
+  if (filters.roomId) queryParams.set("roomId", filters.roomId);
+  if (filters.checkInFrom) queryParams.set("checkInFrom", filters.checkInFrom);
+  if (filters.checkInTo) queryParams.set("checkInTo", filters.checkInTo);
 
   const { data: bookings, isLoading } = useQuery<Booking[]>({
-    queryKey: ["/api/bookings"],
+    queryKey: ["/api/bookings", queryParams.toString()],
+    queryFn: async () => {
+      const url = queryParams.toString() 
+        ? `/api/bookings?${queryParams.toString()}`
+        : "/api/bookings";
+      const response = await fetch(url, { credentials: "include" });
+      if (!response.ok) throw new Error("Failed to fetch bookings");
+      return response.json();
+    },
+  });
+
+  const { data: rooms } = useQuery<Room[]>({
+    queryKey: ["/api/rooms"],
   });
 
   const updateStatusMutation = useMutation({
@@ -66,6 +96,95 @@ export default function Bookings() {
         <h1 className="text-3xl font-bold">Prenotazioni</h1>
         <p className="text-muted-foreground">Gestisci tutte le prenotazioni delle tue proprietà</p>
       </div>
+
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Filter className="w-5 h-5 text-muted-foreground" />
+            <h3 className="font-semibold">Filtri</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="guest-search">Nome Ospite</Label>
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="guest-search"
+                  placeholder="Cerca per nome"
+                  value={filters.guestName}
+                  onChange={(e) => setFilters({ ...filters, guestName: e.target.value })}
+                  className="pl-8"
+                  data-testid="input-guest-search"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status-filter">Stato</Label>
+              <Select value={filters.status || "all"} onValueChange={(value) => setFilters({ ...filters, status: value === "all" ? "" : value })}>
+                <SelectTrigger id="status-filter" data-testid="select-status-filter">
+                  <SelectValue placeholder="Tutti gli stati" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tutti gli stati</SelectItem>
+                  <SelectItem value="pending">In attesa</SelectItem>
+                  <SelectItem value="confirmed">Confermata</SelectItem>
+                  <SelectItem value="cancelled">Annullata</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="room-filter">Camera</Label>
+              <Select value={filters.roomId || "all"} onValueChange={(value) => setFilters({ ...filters, roomId: value === "all" ? "" : value })}>
+                <SelectTrigger id="room-filter" data-testid="select-room-filter">
+                  <SelectValue placeholder="Tutte le camere" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tutte le camere</SelectItem>
+                  {rooms && rooms.length > 0 && rooms.map((room) => (
+                    <SelectItem key={room.id} value={room.id}>
+                      {room.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="checkin-from">Check-in Da</Label>
+              <Input
+                id="checkin-from"
+                type="date"
+                value={filters.checkInFrom}
+                onChange={(e) => setFilters({ ...filters, checkInFrom: e.target.value })}
+                data-testid="input-checkin-from"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="checkin-to">Check-in A</Label>
+              <Input
+                id="checkin-to"
+                type="date"
+                value={filters.checkInTo}
+                onChange={(e) => setFilters({ ...filters, checkInTo: e.target.value })}
+                data-testid="input-checkin-to"
+              />
+            </div>
+          </div>
+          {(filters.guestName || filters.status || filters.roomId || filters.checkInFrom || filters.checkInTo) && (
+            <Button 
+              variant="outline" 
+              onClick={() => setFilters({ guestName: "", status: "", roomId: "", checkInFrom: "", checkInTo: "" })}
+              className="mt-4"
+              data-testid="button-clear-filters"
+            >
+              Cancella filtri
+            </Button>
+          )}
+        </CardContent>
+      </Card>
 
       {!bookings || bookings.length === 0 ? (
         <Card>
