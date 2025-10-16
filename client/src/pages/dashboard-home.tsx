@@ -1,0 +1,169 @@
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar, CheckCircle, Clock, DollarSign } from "lucide-react";
+import { format } from "date-fns";
+import type { Booking, Event } from "@shared/schema";
+
+export default function DashboardHome() {
+  const { data: bookings, isLoading: bookingsLoading } = useQuery<Booking[]>({
+    queryKey: ["/api/bookings"],
+  });
+
+  const { data: events, isLoading: eventsLoading } = useQuery<Event[]>({
+    queryKey: ["/api/events"],
+  });
+
+  const now = new Date();
+  const thisMonth = bookings?.filter(b => {
+    const created = new Date(b.createdAt);
+    return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+  }) || [];
+
+  const pendingBookings = bookings?.filter(b => b.status === "pending") || [];
+  const confirmedBookings = bookings?.filter(b => b.status === "confirmed") || [];
+  
+  const totalRevenue = thisMonth.reduce((sum, b) => sum + parseFloat(String(b.totalPrice)), 0);
+
+  const upcomingEvents = events?.filter(e => {
+    const eventDate = new Date(e.eventDate);
+    const sevenDaysFromNow = new Date();
+    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+    return eventDate >= now && eventDate <= sevenDaysFromNow;
+  }) || [];
+
+  const upcomingCheckIns = confirmedBookings.filter(b => {
+    const checkIn = new Date(b.checkIn);
+    const threeDaysFromNow = new Date();
+    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+    return checkIn >= now && checkIn <= threeDaysFromNow;
+  }).sort((a, b) => new Date(a.checkIn).getTime() - new Date(b.checkIn).getTime());
+
+  const stats = [
+    {
+      title: "Bookings This Month",
+      value: thisMonth.length,
+      icon: Calendar,
+      color: "text-primary",
+    },
+    {
+      title: "Pending Bookings",
+      value: pendingBookings.length,
+      icon: Clock,
+      color: "text-warning",
+    },
+    {
+      title: "Confirmed Bookings",
+      value: confirmedBookings.length,
+      icon: CheckCircle,
+      color: "text-success",
+    },
+    {
+      title: "Revenue This Month",
+      value: `€${totalRevenue.toFixed(2)}`,
+      icon: DollarSign,
+      color: "text-accent",
+    },
+  ];
+
+  if (bookingsLoading || eventsLoading) {
+    return (
+      <div className="p-8">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-1/4"></div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-32 bg-muted rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-8 space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold" data-testid="text-dashboard-title">Dashboard</h1>
+        <p className="text-muted-foreground">Welcome back! Here's your overview</p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat) => (
+          <Card key={stat.title} className="hover-elevate">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {stat.title}
+              </CardTitle>
+              <stat.icon className={`h-4 w-4 ${stat.color}`} />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold" data-testid={`text-${stat.title.toLowerCase().replace(/\s/g, '-')}`}>
+                {stat.value}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Upcoming Check-ins</CardTitle>
+            <CardDescription>Next 3 days</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {upcomingCheckIns.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No upcoming check-ins</p>
+            ) : (
+              <div className="space-y-4">
+                {upcomingCheckIns.slice(0, 5).map((booking) => (
+                  <div key={booking.id} className="flex items-center justify-between" data-testid={`booking-${booking.id}`}>
+                    <div>
+                      <p className="text-sm font-medium">{booking.guestName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(booking.checkIn), "MMM d, yyyy")}
+                      </p>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {booking.guestsCount} {booking.guestsCount === 1 ? "guest" : "guests"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Upcoming Events</CardTitle>
+            <CardDescription>Next 7 days</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {upcomingEvents.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No upcoming events</p>
+            ) : (
+              <div className="space-y-4">
+                {upcomingEvents.slice(0, 5).map((event) => (
+                  <div key={event.id} className="flex items-center justify-between" data-testid={`event-${event.id}`}>
+                    <div>
+                      <p className="text-sm font-medium">{event.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(event.eventDate), "MMM d, yyyy")}
+                      </p>
+                    </div>
+                    {event.category && (
+                      <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
+                        {event.category}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

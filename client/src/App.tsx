@@ -1,0 +1,92 @@
+import { Switch, Route } from "wouter";
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+
+import Home from "@/pages/home";
+import Login from "@/pages/login";
+import Signup from "@/pages/signup";
+import DashboardHome from "@/pages/dashboard-home";
+import Properties from "@/pages/properties";
+import RoomsManagement from "@/pages/rooms-management";
+import Bookings from "@/pages/bookings";
+import Events from "@/pages/events";
+import Settings from "@/pages/settings";
+import BookingWidget from "@/pages/booking-widget";
+import NotFound from "@/pages/not-found";
+
+function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <SidebarProvider>
+      <div className="flex h-screen w-full">
+        <AppSidebar />
+        <div className="flex flex-col flex-1">
+          <header className="flex items-center justify-between p-4 border-b">
+            <SidebarTrigger data-testid="button-sidebar-toggle" />
+          </header>
+          <main className="flex-1 overflow-auto">
+            {children}
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+}
+
+function Router() {
+  return (
+    <Switch>
+      <Route path="/" component={Home} />
+      <Route path="/login" component={Login} />
+      <Route path="/signup" component={Signup} />
+      <Route path="/widget" component={BookingWidget} />
+      
+      <Route path="/dashboard">
+        <DashboardLayout>
+          <DashboardHome />
+        </DashboardLayout>
+      </Route>
+      <Route path="/dashboard/properties">
+        <DashboardLayout>
+          <Properties />
+        </DashboardLayout>
+      </Route>
+      <Route path="/dashboard/rooms">
+        <DashboardLayout>
+          <RoomsManagement />
+        </DashboardLayout>
+      </Route>
+      <Route path="/dashboard/bookings">
+        <DashboardLayout>
+          <Bookings />
+        </DashboardLayout>
+      </Route>
+      <Route path="/dashboard/events">
+        <DashboardLayout>
+          <Events />
+        </DashboardLayout>
+      </Route>
+      <Route path="/dashboard/settings">
+        <DashboardLayout>
+          <Settings />
+        </DashboardLayout>
+      </Route>
+      
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Router />
+        <Toaster />
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
