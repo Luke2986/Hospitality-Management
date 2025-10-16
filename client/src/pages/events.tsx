@@ -65,13 +65,13 @@ export default function Events() {
       setEditingEvent(null);
       form.reset();
       toast({
-        title: "Success",
-        description: "Event saved successfully",
+        title: "Successo",
+        description: "Evento salvato con successo",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: "Errore",
         description: error.message,
         variant: "destructive",
       });
@@ -88,8 +88,8 @@ export default function Events() {
       setEditingEvent(null);
       form.reset();
       toast({
-        title: "Success",
-        description: "Event updated successfully",
+        title: "Successo",
+        description: "Evento aggiornato con successo",
       });
     },
   });
@@ -101,8 +101,8 @@ export default function Events() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       toast({
-        title: "Success",
-        description: "Event deleted successfully",
+        title: "Successo",
+        description: "Evento eliminato con successo",
       });
     },
   });
@@ -169,21 +169,21 @@ export default function Events() {
     <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Events</h1>
-          <p className="text-muted-foreground">Manage local events for your properties</p>
+          <h1 className="text-3xl font-bold">Eventi</h1>
+          <p className="text-muted-foreground">Gestisci eventi locali per le tue proprietà</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleNew} data-testid="button-add-event">
               <Plus className="w-4 h-4 mr-2" />
-              Add Event
+              Aggiungi Evento
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{editingEvent ? "Edit Event" : "Add New Event"}</DialogTitle>
+              <DialogTitle>{editingEvent ? "Modifica Evento" : "Aggiungi Nuovo Evento"}</DialogTitle>
               <DialogDescription>
-                {editingEvent ? "Update event details" : "Create a new local event"}
+                {editingEvent ? "Aggiorna i dettagli dell'evento" : "Crea un nuovo evento locale"}
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -193,11 +193,11 @@ export default function Events() {
                   name="propertyId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Property</FormLabel>
+                      <FormLabel>Proprietà</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-property">
-                            <SelectValue placeholder="Select property" />
+                            <SelectValue placeholder="Seleziona proprietà" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -217,9 +217,9 @@ export default function Events() {
                   name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Event Title</FormLabel>
+                      <FormLabel>Titolo Evento</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Summer Festival" data-testid="input-event-title" />
+                        <Input {...field} placeholder="Festival Estivo" data-testid="input-event-title" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -230,9 +230,9 @@ export default function Events() {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>Descrizione</FormLabel>
                       <FormControl>
-                        <Textarea {...field} placeholder="Event details..." rows={3} data-testid="input-event-description" />
+                        <Textarea {...field} placeholder="Dettagli evento..." rows={3} data-testid="input-event-description" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -244,7 +244,7 @@ export default function Events() {
                     name="eventDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Event Date</FormLabel>
+                        <FormLabel>Data Evento</FormLabel>
                         <FormControl>
                           <Input {...field} type="date" data-testid="input-event-date" />
                         </FormControl>
@@ -257,7 +257,7 @@ export default function Events() {
                     name="endDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>End Date (Optional)</FormLabel>
+                        <FormLabel>Data Fine (Opzionale)</FormLabel>
                         <FormControl>
                           <Input {...field} type="date" data-testid="input-event-end-date" />
                         </FormControl>
@@ -271,9 +271,9 @@ export default function Events() {
                   name="location"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Location</FormLabel>
+                      <FormLabel>Luogo</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="City center" data-testid="input-event-location" />
+                        <Input {...field} placeholder="Centro città" data-testid="input-event-location" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -284,11 +284,11 @@ export default function Events() {
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Category</FormLabel>
+                      <FormLabel>Categoria</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-category">
-                            <SelectValue placeholder="Select category" />
+                            <SelectValue placeholder="Seleziona categoria" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -309,7 +309,7 @@ export default function Events() {
                   disabled={createMutation.isPending || updateMutation.isPending}
                   data-testid="button-save-event"
                 >
-                  {editingEvent ? "Update Event" : "Create Event"}
+                  {editingEvent ? "Aggiorna Evento" : "Crea Evento"}
                 </Button>
               </form>
             </Form>
@@ -321,13 +321,13 @@ export default function Events() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
             <Calendar className="w-16 h-16 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No events yet</h3>
+            <h3 className="text-lg font-semibold mb-2">Nessun evento ancora</h3>
             <p className="text-muted-foreground text-center mb-4">
-              Add local events to attract more guests
+              Aggiungi eventi locali per attrarre più ospiti
             </p>
             <Button onClick={handleNew}>
               <Plus className="w-4 h-4 mr-2" />
-              Add Event
+              Aggiungi Evento
             </Button>
           </CardContent>
         </Card>
@@ -371,7 +371,7 @@ export default function Events() {
                     data-testid={`button-edit-event-${event.id}`}
                   >
                     <Edit className="w-4 h-4 mr-2" />
-                    Edit
+                    Modifica
                   </Button>
                   <Button
                     variant="outline"

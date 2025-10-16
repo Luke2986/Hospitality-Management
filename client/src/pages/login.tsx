@@ -12,8 +12,8 @@ import { Link, useLocation } from "wouter";
 import { LogIn } from "lucide-react";
 
 const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  email: z.string().email("Indirizzo email non valido"),
+  password: z.string().min(6, "La password deve contenere almeno 6 caratteri"),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -36,14 +36,14 @@ export default function Login() {
     },
     onSuccess: () => {
       toast({
-        title: "Success",
-        description: "Logged in successfully",
+        title: "Successo",
+        description: "Accesso effettuato con successo",
       });
       setLocation("/dashboard");
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: "Errore",
         description: error.message,
         variant: "destructive",
       });
@@ -60,10 +60,10 @@ export default function Login() {
         <CardHeader className="space-y-1">
           <CardTitle className="text-3xl font-bold flex items-center gap-2">
             <LogIn className="w-8 h-8 text-primary" />
-            Welcome Back
+            Bentornato
           </CardTitle>
           <CardDescription>
-            Enter your credentials to access your dashboard
+            Inserisci le tue credenziali per accedere alla dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -79,7 +79,7 @@ export default function Login() {
                       <Input
                         {...field}
                         type="email"
-                        placeholder="your@email.com"
+                        placeholder="tua@email.com"
                         data-testid="input-email"
                       />
                     </FormControl>
@@ -111,14 +111,14 @@ export default function Login() {
                 disabled={loginMutation.isPending}
                 data-testid="button-login"
               >
-                {loginMutation.isPending ? "Logging in..." : "Log In"}
+                {loginMutation.isPending ? "Accesso in corso..." : "Accedi"}
               </Button>
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
-            Don't have an account?{" "}
+            Non hai un account?{" "}
             <Link href="/signup" className="text-primary hover:underline" data-testid="link-signup">
-              Sign up
+              Registrati
             </Link>
           </div>
         </CardContent>

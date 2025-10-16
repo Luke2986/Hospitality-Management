@@ -45,13 +45,13 @@ export default function Properties() {
       setEditingProperty(null);
       form.reset();
       toast({
-        title: "Success",
-        description: "Property saved successfully",
+        title: "Successo",
+        description: "Proprietà salvata con successo",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: "Errore",
         description: error.message,
         variant: "destructive",
       });
@@ -68,13 +68,13 @@ export default function Properties() {
       setEditingProperty(null);
       form.reset();
       toast({
-        title: "Success",
-        description: "Property updated successfully",
+        title: "Successo",
+        description: "Proprietà aggiornata con successo",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: "Errore",
         description: error.message,
         variant: "destructive",
       });
@@ -88,13 +88,13 @@ export default function Properties() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
       toast({
-        title: "Success",
-        description: "Property deleted successfully",
+        title: "Successo",
+        description: "Proprietà eliminata con successo",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: "Errore",
         description: error.message,
         variant: "destructive",
       });
@@ -156,21 +156,21 @@ export default function Properties() {
     <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Properties</h1>
-          <p className="text-muted-foreground">Manage your hospitality properties</p>
+          <h1 className="text-3xl font-bold">Proprietà</h1>
+          <p className="text-muted-foreground">Gestisci le tue strutture ricettive</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleNew} data-testid="button-add-property">
               <Plus className="w-4 h-4 mr-2" />
-              Add Property
+              Aggiungi Proprietà
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{editingProperty ? "Edit Property" : "Add New Property"}</DialogTitle>
+              <DialogTitle>{editingProperty ? "Modifica Proprietà" : "Aggiungi Nuova Proprietà"}</DialogTitle>
               <DialogDescription>
-                {editingProperty ? "Update property details" : "Create a new property for your hospitality business"}
+                {editingProperty ? "Aggiorna i dettagli della proprietà" : "Crea una nuova proprietà per la tua attività ricettiva"}
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -180,9 +180,9 @@ export default function Properties() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Property Name</FormLabel>
+                      <FormLabel>Nome Proprietà</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Beautiful B&B" data-testid="input-property-name" />
+                        <Input {...field} placeholder="Bellissimo B&B" data-testid="input-property-name" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -193,9 +193,9 @@ export default function Properties() {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>Descrizione</FormLabel>
                       <FormControl>
-                        <Textarea {...field} placeholder="Describe your property..." rows={3} data-testid="input-property-description" />
+                        <Textarea {...field} placeholder="Descrivi la tua proprietà..." rows={3} data-testid="input-property-description" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -207,9 +207,9 @@ export default function Properties() {
                     name="city"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>City</FormLabel>
+                        <FormLabel>Città</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Florence" data-testid="input-property-city" />
+                          <Input {...field} placeholder="Firenze" data-testid="input-property-city" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -220,7 +220,7 @@ export default function Properties() {
                     name="country"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Country</FormLabel>
+                        <FormLabel>Paese</FormLabel>
                         <FormControl>
                           <Input {...field} placeholder="Italia" data-testid="input-property-country" />
                         </FormControl>
@@ -234,7 +234,7 @@ export default function Properties() {
                   name="address"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Address</FormLabel>
+                      <FormLabel>Indirizzo</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="Via Roma 123" data-testid="input-property-address" />
                       </FormControl>
@@ -247,7 +247,7 @@ export default function Properties() {
                   name="roomsCount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Number of Rooms</FormLabel>
+                      <FormLabel>Numero di Camere</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -267,7 +267,7 @@ export default function Properties() {
                   disabled={createMutation.isPending || updateMutation.isPending}
                   data-testid="button-save-property"
                 >
-                  {editingProperty ? "Update Property" : "Create Property"}
+                  {editingProperty ? "Aggiorna Proprietà" : "Crea Proprietà"}
                 </Button>
               </form>
             </Form>
@@ -279,13 +279,13 @@ export default function Properties() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
             <Building2 className="w-16 h-16 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No properties yet</h3>
+            <h3 className="text-lg font-semibold mb-2">Nessuna proprietà ancora</h3>
             <p className="text-muted-foreground text-center mb-4">
-              Get started by adding your first property
+              Inizia aggiungendo la tua prima proprietà
             </p>
             <Button onClick={handleNew}>
               <Plus className="w-4 h-4 mr-2" />
-              Add Property
+              Aggiungi Proprietà
             </Button>
           </CardContent>
         </Card>
@@ -298,7 +298,7 @@ export default function Properties() {
                   <span>{property.name}</span>
                   {!property.active && (
                     <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                      Inactive
+                      Inattiva
                     </span>
                   )}
                 </CardTitle>
@@ -314,7 +314,7 @@ export default function Properties() {
                   </p>
                 )}
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Rooms: {property.roomsCount}</span>
+                  <span className="text-muted-foreground">Camere: {property.roomsCount}</span>
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -325,7 +325,7 @@ export default function Properties() {
                     data-testid={`button-edit-property-${property.id}`}
                   >
                     <Edit className="w-4 h-4 mr-2" />
-                    Edit
+                    Modifica
                   </Button>
                   <Button
                     variant="outline"

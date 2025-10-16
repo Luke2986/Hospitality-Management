@@ -12,9 +12,9 @@ import { Link, useLocation } from "wouter";
 import { UserPlus } from "lucide-react";
 
 const signupSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  fullName: z.string().min(2, "Full name must be at least 2 characters"),
+  email: z.string().email("Indirizzo email non valido"),
+  password: z.string().min(6, "La password deve contenere almeno 6 caratteri"),
+  fullName: z.string().min(2, "Il nome completo deve contenere almeno 2 caratteri"),
 });
 
 type SignupForm = z.infer<typeof signupSchema>;
@@ -38,14 +38,14 @@ export default function Signup() {
     },
     onSuccess: () => {
       toast({
-        title: "Success",
-        description: "Account created successfully",
+        title: "Successo",
+        description: "Account creato con successo",
       });
       setLocation("/dashboard");
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: "Errore",
         description: error.message,
         variant: "destructive",
       });
@@ -62,10 +62,10 @@ export default function Signup() {
         <CardHeader className="space-y-1">
           <CardTitle className="text-3xl font-bold flex items-center gap-2">
             <UserPlus className="w-8 h-8 text-primary" />
-            Create Account
+            Crea Account
           </CardTitle>
           <CardDescription>
-            Get started with your hospitality management
+            Inizia con la gestione della tua struttura ricettiva
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -76,11 +76,11 @@ export default function Signup() {
                 name="fullName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Name</FormLabel>
+                    <FormLabel>Nome Completo</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="John Doe"
+                        placeholder="Mario Rossi"
                         data-testid="input-fullname"
                       />
                     </FormControl>
@@ -98,7 +98,7 @@ export default function Signup() {
                       <Input
                         {...field}
                         type="email"
-                        placeholder="your@email.com"
+                        placeholder="tua@email.com"
                         data-testid="input-email"
                       />
                     </FormControl>
@@ -130,14 +130,14 @@ export default function Signup() {
                 disabled={signupMutation.isPending}
                 data-testid="button-signup"
               >
-                {signupMutation.isPending ? "Creating account..." : "Create Account"}
+                {signupMutation.isPending ? "Creazione account..." : "Crea Account"}
               </Button>
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
-            Already have an account?{" "}
+            Hai già un account?{" "}
             <Link href="/login" className="text-primary hover:underline" data-testid="link-login">
-              Log in
+              Accedi
             </Link>
           </div>
         </CardContent>

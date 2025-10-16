@@ -23,13 +23,13 @@ export default function Bookings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       toast({
-        title: "Success",
-        description: "Booking status updated",
+        title: "Successo",
+        description: "Stato prenotazione aggiornato",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: "Errore",
         description: error.message,
         variant: "destructive",
       });
@@ -39,11 +39,11 @@ export default function Bookings() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "confirmed":
-        return <Badge className="bg-success text-white" data-testid={`badge-confirmed`}>Confirmed</Badge>;
+        return <Badge className="bg-success text-white" data-testid={`badge-confirmed`}>Confermata</Badge>;
       case "pending":
-        return <Badge className="bg-warning text-white" data-testid={`badge-pending`}>Pending</Badge>;
+        return <Badge className="bg-warning text-white" data-testid={`badge-pending`}>In attesa</Badge>;
       case "cancelled":
-        return <Badge className="bg-danger text-white" data-testid={`badge-cancelled`}>Cancelled</Badge>;
+        return <Badge className="bg-danger text-white" data-testid={`badge-cancelled`}>Annullata</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -63,16 +63,16 @@ export default function Bookings() {
   return (
     <div className="p-8 space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Bookings</h1>
-        <p className="text-muted-foreground">Manage all your property bookings</p>
+        <h1 className="text-3xl font-bold">Prenotazioni</h1>
+        <p className="text-muted-foreground">Gestisci tutte le prenotazioni delle tue proprietà</p>
       </div>
 
       {!bookings || bookings.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
-            <h3 className="text-lg font-semibold mb-2">No bookings yet</h3>
+            <h3 className="text-lg font-semibold mb-2">Nessuna prenotazione ancora</h3>
             <p className="text-muted-foreground text-center">
-              Bookings will appear here when guests make reservations
+              Le prenotazioni appariranno qui quando gli ospiti effettueranno prenotazioni
             </p>
           </CardContent>
         </Card>
@@ -82,13 +82,13 @@ export default function Bookings() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Guest</TableHead>
+                  <TableHead>Ospite</TableHead>
                   <TableHead>Check-in</TableHead>
                   <TableHead>Check-out</TableHead>
-                  <TableHead>Guests</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>Ospiti</TableHead>
+                  <TableHead>Totale</TableHead>
+                  <TableHead>Stato</TableHead>
+                  <TableHead>Azioni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

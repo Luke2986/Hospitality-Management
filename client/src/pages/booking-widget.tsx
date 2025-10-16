@@ -67,8 +67,8 @@ export default function BookingWidget() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
       toast({
-        title: "Booking Request Sent!",
-        description: "Your booking request has been submitted. We'll contact you soon.",
+        title: "Richiesta di Prenotazione Inviata!",
+        description: "La tua richiesta di prenotazione è stata inviata. Ti contatteremo presto.",
       });
       form.reset();
       setSelectedRoom(null);
@@ -77,7 +77,7 @@ export default function BookingWidget() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: "Errore",
         description: error.message,
         variant: "destructive",
       });
@@ -87,8 +87,8 @@ export default function BookingWidget() {
   const onSubmit = (data: any) => {
     if (!selectedRoom) {
       toast({
-        title: "Error",
-        description: "Please select a room",
+        title: "Errore",
+        description: "Seleziona una camera",
         variant: "destructive",
       });
       return;
@@ -96,8 +96,8 @@ export default function BookingWidget() {
 
     if (!checkIn || !checkOut) {
       toast({
-        title: "Error",
-        description: "Please select check-in and check-out dates",
+        title: "Errore",
+        description: "Seleziona le date di check-in e check-out",
         variant: "destructive",
       });
       return;
@@ -121,21 +121,21 @@ export default function BookingWidget() {
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-6xl mx-auto space-y-8">
         <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold">Book Your Stay</h1>
-          <p className="text-muted-foreground">Find the perfect room for your visit</p>
+          <h1 className="text-4xl font-bold">Prenota il Tuo Soggiorno</h1>
+          <p className="text-muted-foreground">Trova la camera perfetta per la tua visita</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Select Property & Dates</CardTitle>
-            <CardDescription>Choose your destination and travel dates</CardDescription>
+            <CardTitle>Seleziona Proprietà e Date</CardTitle>
+            <CardDescription>Scegli la tua destinazione e le date di viaggio</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">Property</label>
+              <label className="text-sm font-medium mb-2 block">Proprietà</label>
               <Select onValueChange={setSelectedProperty} value={selectedProperty}>
                 <SelectTrigger data-testid="select-property">
-                  <SelectValue placeholder="Select a property" />
+                  <SelectValue placeholder="Seleziona una proprietà" />
                 </SelectTrigger>
                 <SelectContent>
                   {properties?.filter(p => p.active).map((property) => (
@@ -175,11 +175,11 @@ export default function BookingWidget() {
         {selectedProperty && checkIn && checkOut && (
           <>
             <div>
-              <h2 className="text-2xl font-bold mb-4">Available Rooms</h2>
+              <h2 className="text-2xl font-bold mb-4">Camere Disponibili</h2>
               {availableRooms.length === 0 ? (
                 <Card>
                   <CardContent className="py-8 text-center text-muted-foreground">
-                    No rooms available for the selected dates
+                    Nessuna camera disponibile per le date selezionate
                   </CardContent>
                 </Card>
               ) : (
@@ -199,11 +199,11 @@ export default function BookingWidget() {
                           <CardDescription className="flex items-center gap-4 text-sm">
                             <span className="flex items-center gap-1">
                               <Users className="w-3 h-3" />
-                              Up to {room.maxGuests}
+                              Fino a {room.maxGuests}
                             </span>
                             <span className="flex items-center gap-1">
                               <Euro className="w-3 h-3" />
-                              {Number(room.pricePerNight).toFixed(2)}/night
+                              {Number(room.pricePerNight).toFixed(2)}/notte
                             </span>
                           </CardDescription>
                         </CardHeader>
@@ -214,7 +214,7 @@ export default function BookingWidget() {
                             </p>
                           )}
                           <div className="text-lg font-bold text-primary">
-                            Total: €{price.toFixed(2)} for {nights} {nights === 1 ? "night" : "nights"}
+                            Totale: €{price.toFixed(2)} per {nights} {nights === 1 ? "notte" : "notti"}
                           </div>
                         </CardContent>
                       </Card>
@@ -226,7 +226,7 @@ export default function BookingWidget() {
 
             {upcomingEvents.length > 0 && (
               <div>
-                <h2 className="text-2xl font-bold mb-4">Upcoming Events Nearby</h2>
+                <h2 className="text-2xl font-bold mb-4">Prossimi Eventi Nelle Vicinanze</h2>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {upcomingEvents.map((event) => (
                     <Card key={event.id} className="hover-elevate" data-testid={`card-event-${event.id}`}>
@@ -268,8 +268,8 @@ export default function BookingWidget() {
             {selectedRoom && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Complete Your Booking</CardTitle>
-                  <CardDescription>Enter your details to request a reservation</CardDescription>
+                  <CardTitle>Completa la Tua Prenotazione</CardTitle>
+                  <CardDescription>Inserisci i tuoi dati per richiedere una prenotazione</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Form {...form}>
@@ -279,9 +279,9 @@ export default function BookingWidget() {
                         name="guestName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Full Name</FormLabel>
+                            <FormLabel>Nome Completo</FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="John Doe" data-testid="input-guest-name" />
+                              <Input {...field} placeholder="Mario Rossi" data-testid="input-guest-name" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -294,7 +294,7 @@ export default function BookingWidget() {
                           <FormItem>
                             <FormLabel>Email</FormLabel>
                             <FormControl>
-                              <Input {...field} type="email" placeholder="john@example.com" data-testid="input-guest-email" />
+                              <Input {...field} type="email" placeholder="mario@esempio.com" data-testid="input-guest-email" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -305,7 +305,7 @@ export default function BookingWidget() {
                         name="guestsCount"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Number of Guests</FormLabel>
+                            <FormLabel>Numero di Ospiti</FormLabel>
                             <FormControl>
                               <Input
                                 {...field}
@@ -322,9 +322,9 @@ export default function BookingWidget() {
                       />
                       <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
                         <div>
-                          <div className="text-sm text-muted-foreground">Total Price</div>
+                          <div className="text-sm text-muted-foreground">Prezzo Totale</div>
                           <div className="text-2xl font-bold">€{totalPrice.toFixed(2)}</div>
-                          <div className="text-xs text-muted-foreground">{numberOfNights} nights</div>
+                          <div className="text-xs text-muted-foreground">{numberOfNights} {numberOfNights === 1 ? "notte" : "notti"}</div>
                         </div>
                         <Button
                           type="submit"
@@ -332,7 +332,7 @@ export default function BookingWidget() {
                           disabled={bookingMutation.isPending}
                           data-testid="button-submit-booking"
                         >
-                          {bookingMutation.isPending ? "Submitting..." : "Request Booking"}
+                          {bookingMutation.isPending ? "Invio in corso..." : "Richiedi Prenotazione"}
                           <ArrowRight className="w-4 h-4 ml-2" />
                         </Button>
                       </div>

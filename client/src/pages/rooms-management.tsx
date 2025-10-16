@@ -50,13 +50,13 @@ export default function RoomsManagement() {
       setEditingRoom(null);
       form.reset();
       toast({
-        title: "Success",
-        description: "Room saved successfully",
+        title: "Successo",
+        description: "Camera salvata con successo",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: "Errore",
         description: error.message,
         variant: "destructive",
       });
@@ -73,8 +73,8 @@ export default function RoomsManagement() {
       setEditingRoom(null);
       form.reset();
       toast({
-        title: "Success",
-        description: "Room updated successfully",
+        title: "Successo",
+        description: "Camera aggiornata con successo",
       });
     },
   });
@@ -86,8 +86,8 @@ export default function RoomsManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/rooms"] });
       toast({
-        title: "Success",
-        description: "Room deleted successfully",
+        title: "Successo",
+        description: "Camera eliminata con successo",
       });
     },
   });
@@ -146,21 +146,21 @@ export default function RoomsManagement() {
     <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Rooms</h1>
-          <p className="text-muted-foreground">Manage rooms across your properties</p>
+          <h1 className="text-3xl font-bold">Camere</h1>
+          <p className="text-muted-foreground">Gestisci le camere delle tue proprietà</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleNew} data-testid="button-add-room">
               <Plus className="w-4 h-4 mr-2" />
-              Add Room
+              Aggiungi Camera
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{editingRoom ? "Edit Room" : "Add New Room"}</DialogTitle>
+              <DialogTitle>{editingRoom ? "Modifica Camera" : "Aggiungi Nuova Camera"}</DialogTitle>
               <DialogDescription>
-                {editingRoom ? "Update room details" : "Create a new room for your property"}
+                {editingRoom ? "Aggiorna i dettagli della camera" : "Crea una nuova camera per la tua proprietà"}
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -170,11 +170,11 @@ export default function RoomsManagement() {
                   name="propertyId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Property</FormLabel>
+                      <FormLabel>Proprietà</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-property">
-                            <SelectValue placeholder="Select property" />
+                            <SelectValue placeholder="Seleziona proprietà" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -194,9 +194,9 @@ export default function RoomsManagement() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Room Name</FormLabel>
+                      <FormLabel>Nome Camera</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Deluxe Suite" data-testid="input-room-name" />
+                        <Input {...field} placeholder="Suite Deluxe" data-testid="input-room-name" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -207,9 +207,9 @@ export default function RoomsManagement() {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>Descrizione</FormLabel>
                       <FormControl>
-                        <Textarea {...field} placeholder="Room details..." rows={3} data-testid="input-room-description" />
+                        <Textarea {...field} placeholder="Dettagli camera..." rows={3} data-testid="input-room-description" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -221,7 +221,7 @@ export default function RoomsManagement() {
                     name="maxGuests"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Max Guests</FormLabel>
+                        <FormLabel>Ospiti Massimi</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
@@ -240,7 +240,7 @@ export default function RoomsManagement() {
                     name="pricePerNight"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Price per Night (€)</FormLabel>
+                        <FormLabel>Prezzo per Notte (€)</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
@@ -261,9 +261,9 @@ export default function RoomsManagement() {
                   render={({ field }) => (
                     <FormItem className="flex items-center justify-between rounded-lg border p-4">
                       <div className="space-y-0.5">
-                        <FormLabel className="text-base">Available for Booking</FormLabel>
+                        <FormLabel className="text-base">Disponibile per Prenotazioni</FormLabel>
                         <div className="text-sm text-muted-foreground">
-                          Enable or disable this room for new bookings
+                          Abilita o disabilita questa camera per nuove prenotazioni
                         </div>
                       </div>
                       <FormControl>
@@ -282,7 +282,7 @@ export default function RoomsManagement() {
                   disabled={createMutation.isPending || updateMutation.isPending}
                   data-testid="button-save-room"
                 >
-                  {editingRoom ? "Update Room" : "Create Room"}
+                  {editingRoom ? "Aggiorna Camera" : "Crea Camera"}
                 </Button>
               </form>
             </Form>
@@ -294,13 +294,13 @@ export default function RoomsManagement() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
             <Bed className="w-16 h-16 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No rooms yet</h3>
+            <h3 className="text-lg font-semibold mb-2">Nessuna camera ancora</h3>
             <p className="text-muted-foreground text-center mb-4">
-              Add rooms to start accepting bookings
+              Aggiungi camere per iniziare ad accettare prenotazioni
             </p>
             <Button onClick={handleNew}>
               <Plus className="w-4 h-4 mr-2" />
-              Add Room
+              Aggiungi Camera
             </Button>
           </CardContent>
         </Card>
@@ -313,18 +313,18 @@ export default function RoomsManagement() {
                   <span>{room.name}</span>
                   {!room.isAvailable && (
                     <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                      Unavailable
+                      Non disponibile
                     </span>
                   )}
                 </CardTitle>
                 <CardDescription className="flex items-center gap-4 text-sm">
                   <span className="flex items-center gap-1">
                     <Users className="w-3 h-3" />
-                    {room.maxGuests} guests
+                    {room.maxGuests} ospiti
                   </span>
                   <span className="flex items-center gap-1">
                     <Euro className="w-3 h-3" />
-                    {Number(room.pricePerNight).toFixed(2)}/night
+                    {Number(room.pricePerNight).toFixed(2)}/notte
                   </span>
                 </CardDescription>
               </CardHeader>
@@ -343,7 +343,7 @@ export default function RoomsManagement() {
                     data-testid={`button-edit-room-${room.id}`}
                   >
                     <Edit className="w-4 h-4 mr-2" />
-                    Edit
+                    Modifica
                   </Button>
                   <Button
                     variant="outline"

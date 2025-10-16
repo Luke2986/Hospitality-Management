@@ -23,27 +23,27 @@ const menuItems = [
     icon: Home,
   },
   {
-    title: "Properties",
+    title: "Proprietà",
     url: "/dashboard/properties",
     icon: Building2,
   },
   {
-    title: "Rooms",
+    title: "Camere",
     url: "/dashboard/rooms",
     icon: Bed,
   },
   {
-    title: "Bookings",
+    title: "Prenotazioni",
     url: "/dashboard/bookings",
     icon: BookOpen,
   },
   {
-    title: "Events",
+    title: "Eventi",
     url: "/dashboard/events",
     icon: Calendar,
   },
   {
-    title: "Settings",
+    title: "Impostazioni",
     url: "/dashboard/settings",
     icon: Settings,
   },
@@ -65,8 +65,8 @@ export function AppSidebar() {
       queryClient.clear();
       setLocation("/login");
       toast({
-        title: "Logged out",
-        description: "You have been logged out successfully",
+        title: "Disconnesso",
+        description: "Sei stato disconnesso con successo",
       });
     },
   });
@@ -112,7 +112,7 @@ export function AppSidebar() {
             data-testid="button-logout"
           >
             <LogOut className="w-4 h-4 mr-2" />
-            Logout
+            Disconnetti
           </Button>
         </div>
       </SidebarFooter>
