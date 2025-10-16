@@ -26,6 +26,7 @@ export interface IStorage {
 
   // Properties
   getProperties(ownerId: string): Promise<Property[]>;
+  getAllActiveProperties(): Promise<Property[]>;
   getProperty(id: string): Promise<Property | undefined>;
   createProperty(property: InsertProperty): Promise<Property>;
   updateProperty(id: string, data: Partial<InsertProperty>): Promise<Property | undefined>;
@@ -73,6 +74,10 @@ export class DatabaseStorage implements IStorage {
   // Properties
   async getProperties(ownerId: string): Promise<Property[]> {
     return db.select().from(properties).where(eq(properties.ownerId, ownerId)).orderBy(desc(properties.createdAt));
+  }
+
+  async getAllActiveProperties(): Promise<Property[]> {
+    return db.select().from(properties).where(eq(properties.active, true)).orderBy(desc(properties.createdAt));
   }
 
   async getProperty(id: string): Promise<Property | undefined> {

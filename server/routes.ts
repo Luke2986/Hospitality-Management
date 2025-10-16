@@ -136,10 +136,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Properties routes
-  app.get("/api/properties", requireAuth, async (req: AuthRequest, res: Response) => {
+  app.get("/api/properties", async (req: AuthRequest, res: Response) => {
     try {
-      const properties = await storage.getProperties(req.userId!);
-      res.json(properties);
+      // If authenticated, return user's properties (all of them)
+      // If not authenticated, return all active properties (for public widget)
+      if (req.session.userId) {
+        const properties = await storage.getProperties(req.session.userId);
+        res.json(properties);
+      } else {
+        const properties = await storage.getAllActiveProperties();
+        res.json(properties);
+      }
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -241,7 +248,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/bookings", async (req: Request, res: Response) => {
     try {
       const validatedData = insertBookingSchema.parse(req.body);
-      const booking = await storage.createBooking(validatedData);
+      
+      // Get the room to find its propertyId
+      const room = await storage.getRoom(validatedData.roomId);
+      if (!room) {
+        return res.status(404).json({ error: "Room not found" });
+      }
+      
+      // Add propertyId from the room
+      const bookingData = {
+        ...validatedData,
+        propertyId: room.propertyId,
+      };
+      
+      const booking = await storage.createBooking(bookingData);
       res.json(booking);
     } catch (error: any) {
       if (error.name === "ZodError") {

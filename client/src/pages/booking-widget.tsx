@@ -52,17 +52,11 @@ export default function BookingWidget() {
     ? Number(selectedRoomData.pricePerNight) * numberOfNights 
     : 0;
 
-  const form = useForm<InsertBooking>({
-    resolver: zodResolver(insertBookingSchema),
+  const form = useForm({
     defaultValues: {
       guestName: "",
       guestEmail: "",
       guestsCount: 1,
-      checkIn: "",
-      checkOut: "",
-      totalPrice: "0",
-      status: "pending",
-      roomId: "",
     },
   });
 
@@ -90,7 +84,7 @@ export default function BookingWidget() {
     },
   });
 
-  const onSubmit = (data: InsertBooking) => {
+  const onSubmit = (data: any) => {
     if (!selectedRoom) {
       toast({
         title: "Error",
@@ -100,13 +94,27 @@ export default function BookingWidget() {
       return;
     }
 
-    bookingMutation.mutate({
-      ...data,
+    if (!checkIn || !checkOut) {
+      toast({
+        title: "Error",
+        description: "Please select check-in and check-out dates",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const bookingData: InsertBooking = {
+      guestName: data.guestName,
+      guestEmail: data.guestEmail,
+      guestsCount: data.guestsCount,
       roomId: selectedRoom,
       checkIn,
       checkOut,
       totalPrice: totalPrice.toString(),
-    });
+      status: "pending",
+    };
+
+    bookingMutation.mutate(bookingData);
   };
 
   return (

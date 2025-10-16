@@ -106,6 +106,9 @@ export const insertBookingSchema = createInsertSchema(bookings).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  propertyId: true,
+}).extend({
+  propertyId: z.string().optional(),
 });
 
 export const insertEventSchema = createInsertSchema(events).omit({
