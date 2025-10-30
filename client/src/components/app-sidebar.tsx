@@ -1,4 +1,4 @@
-import { Home, Building2, Bed, Calendar, Settings, LogOut, BookOpen } from "lucide-react";
+import { Home, Building2, Bed, Calendar, Settings, BookOpen } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -8,13 +8,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarFooter,
 } from "@/components/ui/sidebar";
 import { useLocation } from "wouter";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
 
 const menuItems = [
   {
@@ -50,26 +45,7 @@ const menuItems = [
 ];
 
 export function AppSidebar() {
-  const [location, setLocation] = useLocation();
-  const { toast } = useToast();
-
-  const { data: user } = useQuery({
-    queryKey: ["/api/auth/me"],
-  });
-
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/auth/logout", {});
-    },
-    onSuccess: () => {
-      queryClient.clear();
-      setLocation("/login");
-      toast({
-        title: "Disconnesso",
-        description: "Sei stato disconnesso con successo",
-      });
-    },
-  });
+  const [location] = useLocation();
 
   return (
     <Sidebar>
@@ -98,24 +74,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-4 border-t">
-        <div className="flex flex-col gap-2">
-          <div className="text-sm text-muted-foreground">
-            {user?.fullName || user?.email || "User"}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => logoutMutation.mutate()}
-            disabled={logoutMutation.isPending}
-            className="w-full justify-start"
-            data-testid="button-logout"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Disconnetti
-          </Button>
-        </div>
-      </SidebarFooter>
     </Sidebar>
   );
 }

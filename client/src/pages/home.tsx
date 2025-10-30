@@ -20,10 +20,7 @@ export default function Home() {
 
           <div className="flex gap-4">
             <Button size="lg" asChild data-testid="button-get-started">
-              <Link href="/signup">Inizia</Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild data-testid="button-login">
-              <Link href="/login">Accedi</Link>
+              <Link href="/dashboard">Inizia</Link>
             </Button>
           </div>
 

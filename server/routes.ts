@@ -121,42 +121,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.get("/api/auth/me", requireAuth, async (req: AuthRequest, res: Response) => {
-    try {
-      const user = await storage.getUser(req.userId!);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-      
-      const { password: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
   // Properties routes
-  app.get("/api/properties", async (req: AuthRequest, res: Response) => {
+  app.get("/api/properties", async (req: Request, res: Response) => {
     try {
-      // If authenticated, return user's properties (all of them)
-      // If not authenticated, return all active properties (for public widget)
-      if (req.session.userId) {
-        const properties = await storage.getProperties(req.session.userId);
-        res.json(properties);
-      } else {
-        const properties = await storage.getAllActiveProperties();
-        res.json(properties);
-      }
+      const properties = await storage.getAllActiveProperties();
+      res.json(properties);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  app.post("/api/properties", requireAuth, async (req: AuthRequest, res: Response) => {
+  app.post("/api/properties", async (req: Request, res: Response) => {
     try {
+      // Use a default UUID for ownerId since we don't have authentication
       const validatedData = insertPropertySchema.parse({
         ...req.body,
-        ownerId: req.userId,
+        ownerId: "00000000-0000-0000-0000-000000000000",
       });
       const property = await storage.createProperty(validatedData);
       res.json(property);
@@ -168,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/properties/:id", requireAuth, async (req: AuthRequest, res: Response) => {
+  app.patch("/api/properties/:id", async (req: Request, res: Response) => {
     try {
       const property = await storage.updateProperty(req.params.id, req.body);
       if (!property) {
@@ -180,7 +160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/properties/:id", requireAuth, async (req: AuthRequest, res: Response) => {
+  app.delete("/api/properties/:id", async (req: Request, res: Response) => {
     try {
       await storage.deleteProperty(req.params.id);
       res.json({ success: true });
@@ -200,7 +180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/rooms", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/rooms", async (req: Request, res: Response) => {
     try {
       const validatedData = insertRoomSchema.parse(req.body);
       const room = await storage.createRoom(validatedData);
@@ -213,7 +193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/rooms/:id", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/rooms/:id", async (req: Request, res: Response) => {
     try {
       const room = await storage.updateRoom(req.params.id, req.body);
       if (!room) {
@@ -225,7 +205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/rooms/:id", requireAuth, async (req: Request, res: Response) => {
+  app.delete("/api/rooms/:id", async (req: Request, res: Response) => {
     try {
       await storage.deleteRoom(req.params.id);
       res.json({ success: true });
@@ -235,7 +215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bookings routes
-  app.get("/api/bookings", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/bookings", async (req: Request, res: Response) => {
     try {
       const filters = {
         propertyId: req.query.propertyId as string | undefined,
@@ -279,7 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/bookings/:id", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/bookings/:id", async (req: Request, res: Response) => {
     try {
       const booking = await storage.updateBooking(req.params.id, req.body);
       if (!booking) {
@@ -291,7 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/bookings/:id", requireAuth, async (req: Request, res: Response) => {
+  app.delete("/api/bookings/:id", async (req: Request, res: Response) => {
     try {
       await storage.deleteBooking(req.params.id);
       res.json({ success: true });
@@ -311,7 +291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/events", requireAuth, async (req: Request, res: Response) => {
+  app.post("/api/events", async (req: Request, res: Response) => {
     try {
       const validatedData = insertEventSchema.parse(req.body);
       const event = await storage.createEvent(validatedData);
@@ -324,7 +304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/events/:id", requireAuth, async (req: Request, res: Response) => {
+  app.patch("/api/events/:id", async (req: Request, res: Response) => {
     try {
       const event = await storage.updateEvent(req.params.id, req.body);
       if (!event) {
@@ -336,7 +316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/events/:id", requireAuth, async (req: Request, res: Response) => {
+  app.delete("/api/events/:id", async (req: Request, res: Response) => {
     try {
       await storage.deleteEvent(req.params.id);
       res.json({ success: true });
