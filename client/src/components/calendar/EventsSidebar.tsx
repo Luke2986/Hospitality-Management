@@ -16,7 +16,7 @@ export function EventsSidebar({ events, selectedDates, selectedCategory, onCateg
 
   const categories = Array.from(new Set(events.map(e => e.category).filter(Boolean))) as string[];
 
-  const filteredEvents = events
+  const filteredEvents = [...events]
     .filter(event => {
       let dateMatch = true;
       if (selectedDates.from && selectedDates.to) {

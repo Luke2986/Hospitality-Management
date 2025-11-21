@@ -59,6 +59,7 @@ export function EventCard({ event }: EventCardProps) {
       data-testid={`event-card-${event.id}`}
       data-category={event.category}
       data-event-title={event.title}
+      data-event-date={event.eventDate}
       className="w-full text-left group bg-card rounded-lg p-3 md:p-4 border border-border hover:shadow-lg hover-elevate hover:scale-[1.02] transition-all duration-300 hover:border-primary/20 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
     >
       <div className="flex gap-3">

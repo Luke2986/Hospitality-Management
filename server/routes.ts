@@ -175,7 +175,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const propertyId = req.query.propertyId as string | undefined;
       const events = await storage.getEvents(propertyId);
-      res.json(events);
+      // Sort events chronologically by eventDate (using a copy to avoid mutating storage state)
+      const sortedEvents = [...events].sort((a, b) => {
+        const dateA = new Date(a.eventDate).getTime();
+        const dateB = new Date(b.eventDate).getTime();
+        return dateA - dateB;
+      });
+      res.json(sortedEvents);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

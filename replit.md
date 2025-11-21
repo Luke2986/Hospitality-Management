@@ -167,6 +167,28 @@ Preferred communication style: Simple, everyday language.
 
 **Testing**: End-to-end playwright test passed covering navigation, date selection, event filtering, room selection, and complete booking flow with API confirmation.
 
+### November 21, 2025 - Chronological Event Sorting Implementation
+
+**Event Ordering System**:
+- **Backend** (`server/routes.ts`): GET /api/events now returns events sorted chronologically using `[...events].sort()` to avoid mutating storage state
+- **Frontend** (`EventsSidebar.tsx`): Events filtered and sorted chronologically using `[...events].filter().sort()` to maintain props immutability
+- **Testability** (`EventCard.tsx`): Added `data-event-date` attribute (ISO format YYYY-MM-DD) for reliable test verification
+- Sort logic: `new Date(eventDate).getTime()` comparison for ascending chronological order
+
+**Testing Coverage**:
+- API stability: Multiple consecutive fetches return identical order
+- Year boundary: Dec 2025 → Jan 2026 date ranges maintain correct chronological order
+- Rapid filter toggling: UI remains stable with correct ordering
+- State stability: Multiple filter changes (category + date range) preserve chronological order
+- Timezone validation: ISO date strings sort identically to Date object comparison
+
+**Additional December Events Created**:
+- Dec 13-14: Sagra della Polenta e Cinghiale (sagra)
+- Dec 14: Concerto di Natale del Coro Polifonico (concerto)
+- Dec 20-21: Presepe Vivente (cultura)
+- Dec 20: Ciaspolata Notturna sotto le Stelle (sport)
+- Dec 27-28: Gran Veglione di San Silvestro (cultura)
+
 ### November 21, 2025 - Calendar Enhancements & Bug Fixes
 
 **EventCard Expandable Implementation**:
