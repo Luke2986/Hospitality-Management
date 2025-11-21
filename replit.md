@@ -2,9 +2,9 @@
 
 ## Overview
 
-This is a full-stack web application designed for small hospitality businesses (B&Bs, agriturismos, vacation rentals) to manage properties, rooms, bookings, and local events. The system features a professional dashboard for property owners and a public-facing booking widget for guests.
+This is a full-stack web application designed for small hospitality businesses (B&Bs, agriturismos, vacation rentals) to manage properties, rooms, bookings, and local events. The system features a professional dashboard for property owners and a public-facing booking calendar for guests.
 
-The application is built with a modern TypeScript stack featuring React on the frontend, Express on the backend, and PostgreSQL (via Neon) for data persistence. It uses session-based authentication and provides real-time data management capabilities.
+The application is built with a modern TypeScript stack featuring React on the frontend, Express on the backend, and PostgreSQL (via Neon) for data persistence. The entire interface is in Italian and operates without authentication for direct access.
 
 ## User Preferences
 
@@ -16,9 +16,10 @@ Preferred communication style: Simple, everyday language.
 
 **Core Framework**: React 18 with TypeScript, using Vite as the build tool and development server
 
-**Routing**: Wouter for client-side routing with distinct public and authenticated routes
-- Public routes: Home, Login, Signup, Booking Widget
-- Protected routes: Dashboard pages wrapped in a layout with sidebar navigation
+**Routing**: Wouter for client-side routing
+- Public routes: Home, Booking Widget
+- Dashboard routes: Properties, Rooms, Bookings, Events, Calendar, Settings (all wrapped in sidebar layout)
+- Calendar route (`/dashboard/calendario`): Public booking interface with date selection, event discovery, and room booking flow
 
 **UI Component System**: shadcn/ui (Radix UI primitives) with Tailwind CSS
 - Design system follows "new-york" style from shadcn
@@ -39,15 +40,15 @@ Preferred communication style: Simple, everyday language.
 
 **Server Framework**: Express.js with TypeScript running on Node.js
 
-**API Design**: RESTful endpoints with session-based authentication
-- Auth routes: `/api/auth/signup`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`
+**API Design**: RESTful endpoints without authentication
 - Resource routes follow pattern: `/api/{resource}` with standard CRUD operations
 - Custom middleware for request logging and error handling
+- All endpoints publicly accessible for simplified hospitality management
 
-**Authentication Strategy**: Session-based using express-session
-- Password hashing with Node.js crypto (scrypt algorithm)
-- Session storage using connect-pg-simple (PostgreSQL session store)
-- Protected routes use requireAuth middleware that checks session.userId
+**Authentication Strategy**: No authentication required
+- Default user (UUID `00000000-0000-0000-0000-000000000000`) seeded automatically at server startup
+- Password column nullable in users schema for optional future auth implementation
+- Direct access to all dashboard and booking features
 
 **Data Access Layer**: 
 - Storage abstraction interface (IStorage) in `server/storage.ts`
@@ -64,8 +65,9 @@ Preferred communication style: Simple, everyday language.
 
 **Core Entities**:
 
-1. **Users** - Property owners with authentication credentials
-   - Fields: id (UUID), email, password (hashed), fullName, timestamps
+1. **Users** - Property owners
+   - Fields: id (UUID), email, password (nullable, for future auth), fullName, timestamps
+   - Default user auto-seeded with UUID `00000000-0000-0000-0000-000000000000`
 
 2. **Properties** - Physical locations/establishments
    - Fields: id, ownerId (FK to users), name, description, address, city, country, roomsCount, active status, timestamps
@@ -129,8 +131,9 @@ Preferred communication style: Simple, everyday language.
 - **TanStack Query (React Query)**: Server state management with caching and invalidation
 - **wouter**: Lightweight client-side routing
 
-### Date Handling
-- **date-fns**: Modern date utility library for formatting and calculations
+### Date Handling & Animations
+- **date-fns**: Modern date utility library for formatting and calculations (with Italian locale for calendar)
+- **canvas-confetti**: Celebration animations for booking confirmations
 
 ### Development
 - **Vite**: Frontend build tool and dev server
@@ -138,6 +141,28 @@ Preferred communication style: Simple, everyday language.
 - **esbuild**: JavaScript bundler for production server build
 - **TypeScript**: Static type checking across the stack
 
-### Session Management
-- **express-session**: Session middleware for Express
-- **nanoid**: Unique ID generation for sessions
+## Recent Changes
+
+### November 21, 2025 - Public Booking Calendar Implementation
+
+**Authentication Removal**:
+- Removed all authentication middleware and session management
+- Made password column nullable in users schema
+- Implemented automatic default user seeding at server startup
+- All routes now publicly accessible without login required
+
+**Booking Calendar Feature** (`/dashboard/calendario`):
+- **Calendar Component**: Dual-month calendar with date range selection, Italian locale, event indicators (colored dots), and event tooltips
+- **Events Sidebar**: Filterable event list by category (concerto, sagra, sport, cultura) with date-based filtering
+- **Rooms Grid**: Dynamic room display with automatic price calculation for selected date ranges
+- **Booking Modal**: 3-step booking flow (guest data form → review → confirmation with confetti animation)
+- **Integration**: React Query for data fetching, form validation with Zod, responsive design
+
+**Components Created**:
+- `client/src/components/calendar/Calendar.tsx`: Main calendar with range selection and event indicators
+- `client/src/components/calendar/EventsSidebar.tsx`: Events list with category filters
+- `client/src/components/calendar/RoomsGrid.tsx`: Available rooms display
+- `client/src/components/calendar/BookingModal.tsx`: Multi-step booking confirmation
+- `client/src/pages/calendar.tsx`: Calendar page integration
+
+**Testing**: End-to-end playwright test passed covering navigation, date selection, event filtering, room selection, and complete booking flow with API confirmation.
