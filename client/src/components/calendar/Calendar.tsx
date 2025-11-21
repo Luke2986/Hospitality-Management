@@ -58,9 +58,11 @@ export function Calendar({ selectedDates, onDatesChange, disabledDates = [], eve
     if (isPast || isExplicitlyDisabled) return;
     
     if (!selectedDates.from || (selectedDates.from && selectedDates.to)) {
+      setCurrentMonth(startOfMonth(date));
       onDatesChange({ from: date, to: undefined });
     } else {
       if (isBefore(date, selectedDates.from)) {
+        setCurrentMonth(startOfMonth(date));
         onDatesChange({ from: date, to: undefined });
       } else {
         onDatesChange({ ...selectedDates, to: date });
@@ -86,8 +88,8 @@ export function Calendar({ selectedDates, onDatesChange, disabledDates = [], eve
           className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground mb-2" 
           aria-hidden="true"
         >
-          {['L', 'M', 'M', 'G', 'V', 'S', 'D'].map(d => (
-            <div key={d} className="py-1">{d}</div>
+          {['L', 'M', 'M', 'G', 'V', 'S', 'D'].map((d, i) => (
+            <div key={`day-${i}`} className="py-1">{d}</div>
           ))}
         </div>
         <div className="grid grid-cols-7 gap-1 sm:gap-1.5 justify-items-center" role="grid">
