@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { storage } from "./storage";
 
 const app = express();
 app.use(express.json());
@@ -37,6 +38,32 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Ensure default user exists for properties (no authentication system)
+  const DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000000";
+  try {
+    let user = await storage.getUser(DEFAULT_USER_ID);
+    if (!user) {
+      await storage.createUser({
+        id: DEFAULT_USER_ID,
+        email: "default@system.local",
+        fullName: "System User",
+        // No password - system user doesn't need authentication
+      });
+      user = await storage.getUser(DEFAULT_USER_ID);
+      if (user) {
+        log("✓ Default system user created");
+      }
+    }
+  } catch (error) {
+    log("⚠ Warning: Could not create default user:", error);
+  }
+
+  // Verify default user exists before starting
+  const verifyUser = await storage.getUser(DEFAULT_USER_ID);
+  if (!verifyUser) {
+    throw new Error("FATAL: Default system user does not exist. Cannot start server.");
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
