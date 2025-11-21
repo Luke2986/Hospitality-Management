@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { format, isWithinInterval } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Sparkles, Calendar } from 'lucide-react';
@@ -9,10 +8,11 @@ import { cn } from '@/lib/utils';
 interface EventsSidebarProps {
   events: Event[];
   selectedDates: { from?: Date; to?: Date };
+  selectedCategory: string | null;
+  onCategoryChange: (category: string | null) => void;
 }
 
-export function EventsSidebar({ events, selectedDates }: EventsSidebarProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+export function EventsSidebar({ events, selectedDates, selectedCategory, onCategoryChange }: EventsSidebarProps) {
 
   const categories = Array.from(new Set(events.map(e => e.category).filter(Boolean))) as string[];
 
@@ -43,7 +43,7 @@ export function EventsSidebar({ events, selectedDates }: EventsSidebarProps) {
 
       <div className="flex gap-2 mb-4 md:mb-6 overflow-x-auto pb-2 scrollbar-hide md:scrollbar-thin -mx-4 px-4 md:mx-0 md:px-0">
         <button
-          onClick={() => setSelectedCategory(null)}
+          onClick={() => onCategoryChange(null)}
           data-testid="filter-category-all"
           className={cn(
             "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all flex-shrink-0",
@@ -57,7 +57,7 @@ export function EventsSidebar({ events, selectedDates }: EventsSidebarProps) {
         {categories.map(cat => (
           <button
             key={cat}
-            onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
+            onClick={() => onCategoryChange(cat === selectedCategory ? null : cat)}
             data-testid={`filter-category-${cat}`}
             className={cn(
               "px-3 py-1.5 rounded-full text-xs font-medium capitalize whitespace-nowrap transition-all flex-shrink-0",

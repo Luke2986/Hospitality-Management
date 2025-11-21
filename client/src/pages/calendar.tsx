@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function CalendarPage() {
   const [selectedDates, setSelectedDates] = useState<{ from?: Date; to?: Date }>({});
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const { data: events = [], isLoading: eventsLoading } = useQuery<Event[]>({
     queryKey: ['/api/events'],
@@ -49,6 +50,7 @@ export default function CalendarPage() {
                 selectedDates={selectedDates}
                 onDatesChange={setSelectedDates}
                 events={events}
+                selectedCategory={selectedCategory}
               />
 
               {selectedDates.from && selectedDates.to && rooms.length > 0 && (
@@ -80,6 +82,8 @@ export default function CalendarPage() {
               <EventsSidebar
                 events={events}
                 selectedDates={selectedDates}
+                selectedCategory={selectedCategory}
+                onCategoryChange={setSelectedCategory}
               />
             </div>
           </div>

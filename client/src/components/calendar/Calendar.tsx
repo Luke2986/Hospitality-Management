@@ -21,6 +21,7 @@ interface CalendarProps {
   onDatesChange: (range: { from?: Date; to?: Date }) => void;
   disabledDates?: Date[];
   events?: Event[];
+  selectedCategory?: string | null;
   className?: string;
 }
 
@@ -36,7 +37,7 @@ function getCategoryColor(category?: string) {
   return colors[category || ''] || 'bg-gray-400';
 }
 
-export function Calendar({ selectedDates, onDatesChange, disabledDates = [], events = [], className }: CalendarProps) {
+export function Calendar({ selectedDates, onDatesChange, disabledDates = [], events = [], selectedCategory, className }: CalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
   const today = startOfDay(new Date());
@@ -105,7 +106,25 @@ export function Calendar({ selectedDates, onDatesChange, disabledDates = [], eve
             const isInRange = selectedDates.from && selectedDates.to && 
                             isWithinInterval(day, { start: selectedDates.from, end: selectedDates.to });
             
-            const dayEvents = events.filter(event => isSameDay(new Date(event.eventDate), day));
+            const dayEvents = events.filter(event => {
+              const isSameDate = isSameDay(new Date(event.eventDate), day);
+              
+              let dateMatch = true;
+              if (selectedDates.from && selectedDates.to) {
+                const eventDate = new Date(event.eventDate);
+                dateMatch = isWithinInterval(eventDate, {
+                  start: selectedDates.from,
+                  end: selectedDates.to,
+                });
+              }
+              
+              let categoryMatch = true;
+              if (selectedCategory) {
+                categoryMatch = event.category === selectedCategory;
+              }
+              
+              return isSameDate && dateMatch && categoryMatch;
+            });
             const hasEvent = dayEvents.length > 0;
             const displayEvents = dayEvents.slice(0, 3);
             
