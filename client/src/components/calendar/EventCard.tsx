@@ -57,7 +57,7 @@ export function EventCard({ event }: EventCardProps) {
       aria-expanded={isExpanded}
       aria-controls={event.description ? descriptionId : undefined}
       data-testid={`event-card-${event.id}`}
-      className="w-full text-left group bg-white rounded-lg p-3 md:p-4 border border-gray-100 hover:shadow-lg hover:bg-gray-50 hover:scale-[1.02] transition-all duration-300 hover:border-primary/20 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+      className="w-full text-left group bg-card rounded-lg p-3 md:p-4 border border-border hover:shadow-lg hover-elevate hover:scale-[1.02] transition-all duration-300 hover:border-primary/20 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
     >
       <div className="flex gap-3">
         {/* Badge data */}
