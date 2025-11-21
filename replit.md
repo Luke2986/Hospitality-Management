@@ -81,3 +81,39 @@ Preferred communication style: Simple, everyday language.
 -   **tsx**: TypeScript execution for Node.js.
 -   **esbuild**: JavaScript bundler for production server.
 -   **TypeScript**: Static type checking.
+
+## Recent Changes
+
+### November 21, 2025 - Complete Calendar Widget Implementation
+
+**Full Calendar Widget Transformation**:
+The embeddable widget (`/widget/:propertyId`) now replicates the entire `/dashboard/calendario` experience, providing a complete interactive booking calendar for embedding in client websites (WordPress, etc.).
+
+**Widget Features**:
+- **Dual-Month Calendar**: Interactive date range selection with two-month view, event indicators (colored dots), hover tooltips, Italian locale, navigation buttons, disabled past dates
+- **Events Sidebar**: Category filter buttons (Tutti, concerto, sagra, sport, religioso, mercato, cultura), chronologically sorted event list, filter by date range, color-coded badges
+- **Rooms Grid**: Shows available rooms when dates selected, auto-calculated pricing (nights × rate), room cards with hover effects
+- **Booking Modal**: Multi-step form with Zod validation, guest information fields, total price summary, confetti animation on success
+
+**Technical Implementation**:
+- Component reuse: Calendar, EventsSidebar, RoomsGrid, BookingModal from dashboard
+- Layout: Two-column desktop (calendar+rooms left, events right), stacked mobile
+- Auto-resize: useEffect-based MutationObserver with throttled postMessage (100ms), proper cleanup
+- No sticky sidebar to prevent double scrollbars in iframe
+- API: GET `/api/widget/properties/:propertyId` returns property + rooms + events
+- CORS security: Scoped to `/widget/*` and `/api/widget/*` only
+
+**Embed Integration**:
+- Dashboard settings page includes "Widget WordPress" tab with installation instructions
+- Pre-generated embed code with property ID
+- Auto-resizing iframe via `widget.js` script
+- postMessage communication for height updates
+
+**User Flow**:
+1. Widget loads with property info, calendar, events sidebar
+2. Browse upcoming events, filter by category
+3. Select check-in/check-out dates in calendar
+4. View available rooms with calculated prices
+5. Click room → booking modal opens
+6. Submit booking → confetti + success message
+7. Widget auto-resizes throughout interaction
