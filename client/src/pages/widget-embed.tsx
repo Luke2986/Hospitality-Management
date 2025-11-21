@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'wouter';
 import { Calendar } from '@/components/calendar/Calendar';
@@ -29,10 +29,16 @@ export default function WidgetEmbedPage() {
   });
 
   // Notify parent frame about height changes for auto-resize
-  useState(() => {
+  useEffect(() => {
+    let timeoutId: number;
+    
     const notifyParent = () => {
-      const height = document.body.scrollHeight;
-      window.parent.postMessage({ type: 'resize', height }, '*');
+      // Throttle resize notifications to prevent loops
+      clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(() => {
+        const height = document.body.scrollHeight;
+        window.parent.postMessage({ type: 'resize', height }, '*');
+      }, 100);
     };
 
     // Notify on load and content changes
@@ -45,13 +51,16 @@ export default function WidgetEmbedPage() {
 
     // Also notify on window resize
     window.addEventListener('resize', notifyParent);
+    
+    // Initial notification
     notifyParent();
 
     return () => {
+      clearTimeout(timeoutId);
       observer.disconnect();
       window.removeEventListener('resize', notifyParent);
     };
-  });
+  }, []);
 
   if (!propertyId) {
     return (
@@ -133,7 +142,7 @@ export default function WidgetEmbedPage() {
             </div>
 
             {/* Right Column: Events Sidebar */}
-            <div className="lg:sticky lg:top-8 lg:self-start">
+            <div>
               <EventsSidebar
                 events={widgetData.events}
                 selectedDates={selectedDates}
