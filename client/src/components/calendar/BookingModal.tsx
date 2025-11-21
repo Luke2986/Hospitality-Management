@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Room } from '@shared/schema';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, X, Loader2, ArrowLeft, Calendar, User, Mail, AlertTriangle, Users } from 'lucide-react';
+import { CheckCircle, X, Loader2, ArrowLeft, Calendar, User, Mail, AlertTriangle, Users, Phone } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -26,6 +26,7 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
   const [guestData, setGuestData] = useState({
     name: '',
     email: '',
+    phone: '',
     guests: 1
   });
 
@@ -96,6 +97,7 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
       propertyId: room.propertyId,
       guestName: guestData.name,
       guestEmail: guestData.email,
+      guestPhone: guestData.phone,
       checkIn: selectedDates.from.toISOString().split('T')[0],
       checkOut: selectedDates.to.toISOString().split('T')[0],
       guestsCount: guestData.guests,
@@ -203,6 +205,18 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
                             data-testid="input-guest-email"
                           />
                       </div>
+                      <div>
+                          <label className="block text-sm font-medium mb-1.5 text-foreground">Telefono</label>
+                          <input 
+                            required 
+                            type="tel" 
+                            className="w-full border border-input rounded-lg p-2.5 focus:ring-2 focus:ring-primary/50 outline-none transition-all bg-background" 
+                            placeholder="+39 333 123 4567" 
+                            value={guestData.phone}
+                            onChange={(e) => setGuestData({...guestData, phone: e.target.value})}
+                            data-testid="input-guest-phone"
+                          />
+                      </div>
                     </div>
 
                     <Button 
@@ -262,6 +276,15 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
                       <div className="overflow-hidden">
                         <p className="text-xs text-muted-foreground">Email</p>
                         <p className="font-medium text-foreground truncate">{guestData.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                        <Phone size={16} />
+                      </div>
+                      <div className="overflow-hidden">
+                        <p className="text-xs text-muted-foreground">Telefono</p>
+                        <p className="font-medium text-foreground truncate">{guestData.phone}</p>
                       </div>
                     </div>
                   </div>
