@@ -16,23 +16,29 @@ export function EventsSidebar({ events, selectedDates, selectedCategory, onCateg
 
   const categories = Array.from(new Set(events.map(e => e.category).filter(Boolean))) as string[];
 
-  const filteredEvents = events.filter(event => {
-    let dateMatch = true;
-    if (selectedDates.from && selectedDates.to) {
-      const eventDate = new Date(event.eventDate);
-      dateMatch = isWithinInterval(eventDate, {
-        start: selectedDates.from,
-        end: selectedDates.to,
-      });
-    }
+  const filteredEvents = events
+    .filter(event => {
+      let dateMatch = true;
+      if (selectedDates.from && selectedDates.to) {
+        const eventDate = new Date(event.eventDate);
+        dateMatch = isWithinInterval(eventDate, {
+          start: selectedDates.from,
+          end: selectedDates.to,
+        });
+      }
 
-    let categoryMatch = true;
-    if (selectedCategory) {
-      categoryMatch = event.category === selectedCategory;
-    }
+      let categoryMatch = true;
+      if (selectedCategory) {
+        categoryMatch = event.category === selectedCategory;
+      }
 
-    return dateMatch && categoryMatch;
-  });
+      return dateMatch && categoryMatch;
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.eventDate).getTime();
+      const dateB = new Date(b.eventDate).getTime();
+      return dateA - dateB;
+    });
 
   return (
     <div className="bg-card rounded-xl p-4 md:p-6 shadow-lg sticky top-4 md:top-8 border border-border">
