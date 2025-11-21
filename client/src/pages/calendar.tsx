@@ -1,0 +1,90 @@
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Event, Room } from '@shared/schema';
+import { Calendar } from '@/components/calendar/Calendar';
+import { EventsSidebar } from '@/components/calendar/EventsSidebar';
+import { RoomsGrid } from '@/components/calendar/RoomsGrid';
+import { Skeleton } from '@/components/ui/skeleton';
+
+export default function CalendarPage() {
+  const [selectedDates, setSelectedDates] = useState<{ from?: Date; to?: Date }>({});
+
+  const { data: events = [], isLoading: eventsLoading } = useQuery<Event[]>({
+    queryKey: ['/api/events'],
+  });
+
+  const { data: rooms = [], isLoading: roomsLoading } = useQuery<Room[]>({
+    queryKey: ['/api/rooms'],
+  });
+
+  const isLoading = eventsLoading || roomsLoading;
+
+  return (
+    <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl md:text-4xl font-bold text-foreground">
+            Prenota il tuo soggiorno
+          </h1>
+          <p className="text-muted-foreground">
+            Seleziona le date, esplora gli eventi locali e scegli la camera perfetta
+          </p>
+        </div>
+
+        {/* Main Content */}
+        {isLoading ? (
+          <div className="grid lg:grid-cols-[1fr_350px] gap-6">
+            <div className="space-y-6">
+              <Skeleton className="h-[500px] w-full" />
+              <Skeleton className="h-[400px] w-full" />
+            </div>
+            <Skeleton className="h-[600px] w-full" />
+          </div>
+        ) : (
+          <div className="grid lg:grid-cols-[1fr_350px] gap-6">
+            {/* Left Column: Calendar + Rooms */}
+            <div className="space-y-6">
+              <Calendar
+                selectedDates={selectedDates}
+                onDatesChange={setSelectedDates}
+                events={events}
+              />
+
+              {selectedDates.from && selectedDates.to && rooms.length > 0 && (
+                <RoomsGrid
+                  rooms={rooms}
+                  selectedDates={selectedDates}
+                />
+              )}
+
+              {selectedDates.from && selectedDates.to && rooms.length === 0 && (
+                <div className="bg-card rounded-xl p-6 shadow-lg border border-border text-center">
+                  <p className="text-muted-foreground">
+                    Nessuna camera disponibile per le date selezionate
+                  </p>
+                </div>
+              )}
+
+              {(!selectedDates.from || !selectedDates.to) && (
+                <div className="bg-card rounded-xl p-6 shadow-lg border border-border text-center">
+                  <p className="text-muted-foreground">
+                    Seleziona le date per vedere le camere disponibili
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: Events Sidebar */}
+            <div className="lg:sticky lg:top-8 lg:self-start">
+              <EventsSidebar
+                events={events}
+                selectedDates={selectedDates}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

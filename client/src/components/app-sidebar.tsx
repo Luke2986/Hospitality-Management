@@ -1,4 +1,4 @@
-import { Home, Building2, Bed, Calendar, Settings, BookOpen } from "lucide-react";
+import { Home, Building2, Bed, Calendar, Settings, BookOpen, CalendarDays } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -36,6 +36,11 @@ const menuItems = [
     title: "Eventi",
     url: "/dashboard/events",
     icon: Calendar,
+  },
+  {
+    title: "Calendario",
+    url: "/dashboard/calendario",
+    icon: CalendarDays,
   },
   {
     title: "Impostazioni",

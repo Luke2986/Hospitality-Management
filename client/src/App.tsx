@@ -16,6 +16,7 @@ import Bookings from "@/pages/bookings";
 import Events from "@/pages/events";
 import Settings from "@/pages/settings";
 import BookingWidget from "@/pages/booking-widget";
+import CalendarPage from "@/pages/calendar";
 import NotFound from "@/pages/not-found";
 
 function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -67,6 +68,11 @@ function Router() {
       <Route path="/dashboard/events">
         <DashboardLayout>
           <Events />
+        </DashboardLayout>
+      </Route>
+      <Route path="/dashboard/calendario">
+        <DashboardLayout>
+          <CalendarPage />
         </DashboardLayout>
       </Route>
       <Route path="/dashboard/settings">
