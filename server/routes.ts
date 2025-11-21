@@ -221,6 +221,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Widget API - Public endpoint for embedded widget
+  app.get("/api/widget/properties/:propertyId", async (req: Request, res: Response) => {
+    try {
+      const { propertyId } = req.params;
+      
+      // Fetch property data
+      const property = await storage.getProperty(propertyId);
+      if (!property) {
+        return res.status(404).json({ error: "Property not found" });
+      }
+
+      // Fetch rooms for this property
+      const allRooms = await storage.getRooms(propertyId);
+      const rooms = allRooms.filter(room => room.isAvailable);
+
+      // Fetch events for this property (sorted chronologically)
+      const events = await storage.getEvents(propertyId);
+      const sortedEvents = [...events].sort((a, b) => {
+        const dateA = new Date(a.eventDate).getTime();
+        const dateB = new Date(b.eventDate).getTime();
+        return dateA - dateB;
+      });
+
+      // Return combined data for widget
+      res.json({
+        property,
+        rooms,
+        events: sortedEvents,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

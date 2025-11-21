@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Widget Prenotazioni - Simulazione Sito WordPress</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: #f5f5f5;
+    }
+    
+    header {
+      background: #2c3e50;
+      color: white;
+      padding: 1.5rem 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    
+    header h1 {
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    header p {
+      opacity: 0.9;
+      font-size: 0.95rem;
+    }
+    
+    nav {
+      background: white;
+      padding: 1rem 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    nav ul {
+      list-style: none;
+      display: flex;
+      gap: 2rem;
+    }
+    
+    nav a {
+      color: #2c3e50;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    
+    nav a:hover {
+      color: #3498db;
+    }
+    
+    main {
+      padding: 2rem 0;
+    }
+    
+    .content-section {
+      background: white;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .content-section h2 {
+      color: #2c3e50;
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+    }
+    
+    .content-section p {
+      margin-bottom: 1rem;
+      color: #555;
+    }
+    
+    .widget-section {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .widget-section h2 {
+      color: #2c3e50;
+      margin-bottom: 1.5rem;
+      font-size: 1.8rem;
+      text-align: center;
+    }
+    
+    footer {
+      background: #2c3e50;
+      color: white;
+      padding: 2rem 0;
+      margin-top: 3rem;
+      text-align: center;
+    }
+    
+    footer p {
+      opacity: 0.8;
+      font-size: 0.9rem;
+    }
+    
+    @media (max-width: 768px) {
+      nav ul {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      
+      .content-section,
+      .widget-section {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>🏡 Podere Santa Caterina</h1>
+      <p>Il tuo rifugio nel cuore del Chianti</p>
+    </div>
+  </header>
+
+  <nav>
+    <div class="container">
+      <ul>
+        <li><a href="#home">Home</a></li>
+        <li><a href="#camere">Camere</a></li>
+        <li><a href="#servizi">Servizi</a></li>
+        <li><a href="#prenota">Prenota Ora</a></li>
+        <li><a href="#contatti">Contatti</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div class="content-section">
+      <h2>Benvenuti nel Cuore della Toscana</h2>
+      <p>
+        Immerso tra i vigneti e gli uliveti secolari del Chianti, il Podere Santa Caterina 
+        vi accoglie in un'atmosfera di pace e autenticità. La nostra struttura, 
+        sapientemente ristrutturata, conserva il fascino della tradizione toscana 
+        abbinandolo ai comfort moderni.
+      </p>
+      <p>
+        Ogni camera è stata progettata per offrirvi il massimo del relax, con arredi 
+        curati nei minimi dettagli e una vista mozzafiato sulle colline circostanti. 
+        Che siate qui per una fuga romantica, una vacanza in famiglia o un soggiorno 
+        di lavoro, troverete tutto ciò di cui avete bisogno.
+      </p>
+    </div>
+
+    <div class="content-section">
+      <h2>Le Nostre Camere</h2>
+      <p>
+        Disponiamo di camere eleganti e confortevoli, ognuna con il proprio carattere 
+        unico. Dalle camere doppie romantiche alle spaziose suite familiari, tutte 
+        dotate di bagno privato, Wi-Fi gratuito e aria condizionata.
+      </p>
+      <p>
+        Al risveglio, vi aspetta una ricca colazione biologica con prodotti locali 
+        e fatti in casa: marmellate artigianali, torte fresche, formaggi del territorio 
+        e molto altro.
+      </p>
+    </div>
+
+    <!-- WIDGET SECTION - This is what clients will embed -->
+    <div class="widget-section" id="prenota">
+      <h2>📅 Prenota il Tuo Soggiorno</h2>
+      
+      <!-- BOOKING WIDGET EMBED CODE START -->
+      <div data-booking-widget data-property-id="cb36d88e-14d1-4816-85a5-71555e3c2759"></div>
+      <script>
+        window.BOOKING_WIDGET_URL = 'http://localhost:5000';
+      </script>
+      <script src="http://localhost:5000/widget.js" async></script>
+      <!-- BOOKING WIDGET EMBED CODE END -->
+      
+    </div>
+
+    <div class="content-section">
+      <h2>Cosa Fare Nelle Vicinanze</h2>
+      <p>
+        La nostra posizione strategica vi permette di esplorare facilmente le meraviglie 
+        del Chianti. A pochi chilometri troverete cantine storiche per degustazioni di 
+        vino, borghi medievali come Greve in Chianti e Radda, e percorsi di trekking 
+        immersi nella natura.
+      </p>
+      <p>
+        Non perdete i mercatini locali, le sagre enogastronomiche e gli eventi culturali 
+        che animano la zona durante tutto l'anno. Il nostro staff sarà lieto di 
+        consigliarvi le migliori esperienze da vivere.
+      </p>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>&copy; 2025 Podere Santa Caterina - Via Santa Caterina 7, Greve in Chianti (FI)</p>
+      <p>Tel: +39 055 123 4567 | Email: info@poderesantacaterina.it</p>
+    </div>
+  </footer>
+</body>
+</html>

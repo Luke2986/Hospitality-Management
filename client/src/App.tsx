@@ -16,6 +16,7 @@ import Bookings from "@/pages/bookings";
 import Events from "@/pages/events";
 import Settings from "@/pages/settings";
 import BookingWidget from "@/pages/booking-widget";
+import WidgetEmbed from "@/pages/widget-embed";
 import CalendarPage from "@/pages/calendar";
 import NotFound from "@/pages/not-found";
 
@@ -44,6 +45,9 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
       <Route path="/widget" component={BookingWidget} />
+      <Route path="/widget/:propertyId">
+        {(params) => <WidgetEmbed propertyId={params.propertyId} />}
+      </Route>
       
       <Route path="/dashboard">
         <DashboardLayout>
