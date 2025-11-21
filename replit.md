@@ -166,3 +166,50 @@ Preferred communication style: Simple, everyday language.
 - `client/src/pages/calendar.tsx`: Calendar page integration
 
 **Testing**: End-to-end playwright test passed covering navigation, date selection, event filtering, room selection, and complete booking flow with API confirmation.
+
+### November 21, 2025 - Calendar Enhancements & Bug Fixes
+
+**EventCard Expandable Implementation**:
+- EventCard component with click-to-expand functionality using CSS transitions
+- Smooth animations (duration-500) for description visibility toggle
+- ChevronDown icon rotation (rotate-180) as visual indicator
+- bg-card background for dark mode compatibility
+- 6 holiday/new year events (31 DEC - 28 JAN) created with complete Italian descriptions
+
+**Critical Bug Fixes**:
+1. **Duplicate Keys Fix** (Calendar.tsx line 93):
+   - Problem: `{['L', 'M', 'M', 'G', 'V', 'S', 'D'].map(d => <div key={d}>)` caused React warning for duplicate "M" keys
+   - Solution: `{['L', 'M', 'M', 'G', 'V', 'S', 'D'].map((d, i) => <div key={`day-${i}`}>)` using index for unique keys
+
+2. **Calendar Auto-Update** (Calendar.tsx handleDateClick):
+   - Problem: Calendar remained on December when selecting January dates
+   - Solution: Added `setCurrentMonth(startOfMonth(date))` when selecting new date range start
+   - Behavior: Calendar now automatically jumps to the month of the selected date
+
+3. **Tooltip Filter Alignment** (Calendar.tsx + EventsSidebar.tsx):
+   - Problem: Event tooltips showed all events regardless of selected date range/category filters
+   - Solution: Lifted `selectedCategory` state to calendar.tsx parent component
+   - Implementation:
+     - calendar.tsx manages `selectedCategory` state
+     - Passes `selectedCategory` + `onCategoryChange` to EventsSidebar (controlled props)
+     - Passes `selectedCategory` to Calendar component
+     - Calendar filters `dayEvents` using same logic as sidebar: `isSameDay AND dateRange AND category`
+   - Result: Only events matching ALL filters (date + range + category) appear in DOM (sidebar + tooltips + aria-labels)
+
+4. **Empty State Button Fix** (EventsSidebar.tsx line 108):
+   - Problem: "Mostra tutti gli eventi" button called `setSelectedCategory(null)` which no longer existed after state hoisting
+   - Solution: Changed to `onCategoryChange(null)` using controlled prop
+   - Added: `data-testid="button-reset-category"` for test automation
+
+**State Management Architecture**:
+- calendar.tsx: Parent component managing `selectedDates` and `selectedCategory` states
+- EventsSidebar: Receives controlled props `selectedCategory` + `onCategoryChange` (was using internal useState before)
+- Calendar: Receives `selectedCategory` read-only prop for tooltip filtering
+- Ensures perfect synchronization between sidebar filters and calendar tooltip rendering
+
+**Test Coverage**: All E2E tests passing
+- Date range selection (December, January ranges)
+- Category filters (sagra, concerto, cultura, sport, religioso)
+- Empty state button reset without runtime errors
+- Events outside range/category completely removed from DOM
+- Calendar auto-navigation to selected month verified

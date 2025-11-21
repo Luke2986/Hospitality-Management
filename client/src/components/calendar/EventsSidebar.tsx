@@ -102,7 +102,8 @@ export function EventsSidebar({ events, selectedDates, selectedCategory, onCateg
           </p>
           {selectedCategory && (
             <button 
-              onClick={() => setSelectedCategory(null)}
+              onClick={() => onCategoryChange(null)}
+              data-testid="button-reset-category"
               className="text-primary text-sm font-medium mt-2 hover:underline"
             >
               Mostra tutti gli eventi
