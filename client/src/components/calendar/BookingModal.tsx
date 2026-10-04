@@ -7,6 +7,7 @@ import { useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { toDateString } from '@/lib/availability';
 import { useToast } from '@/hooks/use-toast';
+import { Turnstile } from './Turnstile';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -14,9 +15,10 @@ interface BookingModalProps {
   room: Room;
   selectedDates: { from?: Date; to?: Date };
   nights: number;
+  turnstileSiteKey?: string | null;
 }
 
-export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: BookingModalProps) {
+export function BookingModal({ isOpen, onClose, room, selectedDates, nights, turnstileSiteKey }: BookingModalProps) {
   const [step, setStep] = useState<'form' | 'review' | 'success'>('form');
   const { toast } = useToast();
   
@@ -30,6 +32,9 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
     phone: '',
     guests: 1
   });
+  const [website, setWebsite] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
 
   const createBookingMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -47,6 +52,7 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
       });
     },
     onError: (error: any) => {
+      if (turnstileSiteKey) setTurnstileResetKey((key) => key + 1);
       if (error?.status === 409) {
         queryClient.invalidateQueries({ queryKey: ['/api/widget/properties'] });
         queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
@@ -111,6 +117,8 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
       checkIn: toDateString(selectedDates.from),
       checkOut: toDateString(selectedDates.to),
       guestsCount: guestData.guests,
+      website,
+      turnstileToken,
     });
   };
 
@@ -166,6 +174,16 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
         <div className="p-5 md:p-6 overflow-y-auto">
             {step === 'form' && (
                 <form onSubmit={handleFormSubmit} className="space-y-4">
+                    <input
+                      type="text"
+                      name="website"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      aria-hidden="true"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                      className="absolute -left-[9999px] h-px w-px opacity-0"
+                    />
                     <div className="bg-muted p-4 rounded-lg mb-4 border border-border">
                         <div className="font-medium text-foreground text-lg leading-tight">{room.name}</div>
                         <div className="text-sm text-muted-foreground flex items-center gap-2 mt-2">
@@ -305,6 +323,14 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
                   </div>
                 </div>
 
+                {turnstileSiteKey && (
+                  <Turnstile
+                    siteKey={turnstileSiteKey}
+                    onToken={setTurnstileToken}
+                    resetKey={turnstileResetKey}
+                  />
+                )}
+
                 <div className="flex gap-3 pt-2">
                   <Button 
                     variant="outline" 
@@ -318,7 +344,7 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
                     onClick={handleFinalConfirm}
                     data-testid="button-confirm"
                     className="flex-[2]"
-                    disabled={createBookingMutation.isPending}
+                    disabled={createBookingMutation.isPending || (!!turnstileSiteKey && !turnstileToken)}
                   >
                     {createBookingMutation.isPending ? <Loader2 className="animate-spin mr-2" /> : 'Conferma Prenotazione'}
                   </Button>

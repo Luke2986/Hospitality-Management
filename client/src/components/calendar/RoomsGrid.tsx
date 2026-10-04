@@ -7,9 +7,10 @@ import { BookingModal } from './BookingModal';
 interface RoomsGridProps {
   rooms: Room[];
   selectedDates: { from?: Date; to?: Date };
+  turnstileSiteKey?: string | null;
 }
 
-export function RoomsGrid({ rooms, selectedDates }: RoomsGridProps) {
+export function RoomsGrid({ rooms, selectedDates, turnstileSiteKey }: RoomsGridProps) {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -54,6 +55,7 @@ export function RoomsGrid({ rooms, selectedDates }: RoomsGridProps) {
           room={selectedRoom}
           selectedDates={selectedDates}
           nights={nights}
+          turnstileSiteKey={turnstileSiteKey}
         />
       )}
     </>

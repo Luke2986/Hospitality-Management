@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { z } from "zod";
 import { storage } from "./storage";
 import { setupAuth, requireAuth, rateLimit } from "./auth";
+import { turnstileSiteKey, verifyTurnstile } from "./turnstile";
 import {
   insertPropertySchema,
   insertRoomSchema,
@@ -36,7 +37,8 @@ const guestBookingSchema = insertBookingSchema.pick({
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const INTERNAL_ERROR = "Errore interno del server";
-const ROOM_UNAVAILABLE ="La camera non è disponibile per le date selezionate";
+const BOT_CHECK_FAILED = "Verifica anti-bot non riuscita, riprova";
+const ROOM_UNAVAILABLE = "La camera non è disponibile per le date selezionate";
 
 function sendError(res: Response, error: any) {
   if (error?.name === "ZodError") {
@@ -107,7 +109,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bookedRanges = await storage.getBookedRanges(propertyId, fromDate);
 
       const { ownerId: _ownerId, ...publicProperty } = property;
-      res.json({ property: publicProperty, rooms, events: sortedEvents, bookedRanges });
+      res.json({
+        property: publicProperty,
+        rooms,
+        events: sortedEvents,
+        bookedRanges,
+        turnstileSiteKey: turnstileSiteKey(),
+      });
     } catch (error: any) {
       sendError(res, error);
     }
@@ -115,7 +123,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/widget/bookings", bookingLimiter, async (req: Request, res: Response) => {
     try {
+      // Hidden "website" field: people never see it, simple bots fill it in.
+      if (req.body?.website) {
+        return res.status(400).json({ error: BOT_CHECK_FAILED });
+      }
       const data = guestBookingSchema.parse(req.body);
+      // Logged-in owners booking from the dashboard calendar are already authenticated.
+      if (!req.isAuthenticated() && !(await verifyTurnstile(req.body.turnstileToken, req.ip))) {
+        return res.status(400).json({ error: BOT_CHECK_FAILED, code: "BOT_CHECK_FAILED" });
+      }
       const room = await storage.getRoom(data.roomId);
       if (!room || !room.isAvailable) {
         return res.status(404).json({ error: "Room not found" });

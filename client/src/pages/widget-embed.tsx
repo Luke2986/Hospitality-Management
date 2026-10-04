@@ -13,6 +13,7 @@ interface WidgetData {
   rooms: Room[];
   events: Event[];
   bookedRanges: BookedRange[];
+  turnstileSiteKey: string | null;
 }
 
 export default function WidgetEmbedPage() {
@@ -112,6 +113,7 @@ export default function WidgetEmbedPage() {
                 <RoomsGrid
                   rooms={freeRooms}
                   selectedDates={selectedDates}
+                  turnstileSiteKey={widgetData.turnstileSiteKey}
                 />
               )}
 
