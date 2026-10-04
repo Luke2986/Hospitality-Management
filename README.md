@@ -108,23 +108,22 @@ Elenco da risolvere. Ordinato per gravità.
 1. **CORS aperto (`*`) e `frame-ancestors *`** su `/widget`, `/api/widget` e su qualunque percorso che termini in `.js` o `.html`.
 2. **TLS al database senza verifica** (`rejectUnauthorized: false` in `server/db.ts`).
 3. **Rate limiting solo in memoria**: vale per singolo processo e si azzera al riavvio; nessun CAPTCHA sulle prenotazioni pubbliche.
-4. **Messaggi d'errore interni esposti** (`error.message` restituito al client) e log che includono il corpo delle risposte JSON, con dati personali.
+4. **Log con dati personali.** I log delle richieste includono il corpo delle risposte JSON (email, nomi, telefoni degli ospiti).
 5. **Nessuna protezione CSRF esplicita**: ci si affida a `SameSite=Lax` sul cookie di sessione.
 
 **Correttezza**
 
-6. **Gestione errori incoerente.** Il gestore errori globale rilancia l'errore dopo aver risposto (`throw err`).
-7. **Soft-delete assente e cancellazioni a cascata.** Eliminare una struttura cancella camere, prenotazioni ed eventi senza backup.
-8. **Dati legacy orfani.** Le strutture create prima dell'autenticazione appartengono all'utente di sistema `00000000-0000-0000-0000-000000000000`, che non può accedere: vanno riassegnate a mano (vedi sotto). Gli account creati prima della conferma email devono confermare l'indirizzo: al login compare il pulsante per ricevere il link.
+6. **Soft-delete assente e cancellazioni a cascata.** Eliminare una struttura cancella camere, prenotazioni ed eventi senza backup.
+7. **Dati legacy orfani.** Le strutture create prima dell'autenticazione appartengono all'utente di sistema `00000000-0000-0000-0000-000000000000`, che non può accedere: vanno riassegnate a mano (vedi sotto). Gli account creati prima della conferma email devono confermare l'indirizzo: al login compare il pulsante per ricevere il link.
 
 **Qualità e manutenzione**
 
-9. **Nessun test automatico** (unit, integrazione, e2e) e nessuna CI.
-10. **Nessun `.env.example`.**
-11. **Funzionalità solo accennate nello schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` negli eventi non sono usate.
-12. **Nessuna paginazione** su liste di camere, prenotazioni ed eventi.
-13. **Nessuna notifica email per le prenotazioni**, né all'ospite né al proprietario.
-14. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
+8. **Nessun test automatico** (unit, integrazione, e2e) e nessuna CI.
+9. **Nessun `.env.example`.**
+10. **Funzionalità solo accennate nello schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` negli eventi non sono usate.
+11. **Nessuna paginazione** su liste di camere, prenotazioni ed eventi.
+12. **Nessuna notifica email per le prenotazioni**, né all'ospite né al proprietario.
+13. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
 
 #### Riassegnare i dati legacy
 
@@ -277,23 +276,22 @@ To be fixed. Ordered by severity.
 1. **Wide-open CORS (`*`) and `frame-ancestors *`** on `/widget`, `/api/widget`, and any path ending in `.js` or `.html`.
 2. **Unverified TLS to the database** (`rejectUnauthorized: false` in `server/db.ts`).
 3. **In-memory rate limiting only**: per process and reset on restart; no CAPTCHA on public bookings.
-4. **Internal error messages leaked** (`error.message` returned to clients) and request logs that include JSON response bodies containing personal data.
+4. **Personal data in logs.** Request logs include JSON response bodies (guest emails, names, phone numbers).
 5. **No explicit CSRF protection**: relies on `SameSite=Lax` on the session cookie.
 
 **Correctness**
 
-6. **Inconsistent error handling.** The global error handler rethrows after responding (`throw err`).
-7. **No soft delete, cascading hard deletes.** Deleting a property wipes its rooms, bookings and events with no backup.
-8. **Orphaned legacy data.** Properties created before authentication belong to the system user `00000000-0000-0000-0000-000000000000`, which cannot log in: reassign them manually (see below). Accounts created before email confirmation must confirm their address: the login page offers a button to get the link.
+6. **No soft delete, cascading hard deletes.** Deleting a property wipes its rooms, bookings and events with no backup.
+7. **Orphaned legacy data.** Properties created before authentication belong to the system user `00000000-0000-0000-0000-000000000000`, which cannot log in: reassign them manually (see below). Accounts created before email confirmation must confirm their address: the login page offers a button to get the link.
 
 **Quality and maintenance**
 
-9. **No automated tests** (unit, integration, e2e) and no CI.
-10. **No `.env.example`.**
-11. **Half-built features in the schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` on events are unused.
-12. **No pagination** on room, booking and event lists.
-13. **No booking email notifications** to the guest or owner.
-14. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
+8. **No automated tests** (unit, integration, e2e) and no CI.
+9. **No `.env.example`.**
+10. **Half-built features in the schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` on events are unused.
+11. **No pagination** on room, booking and event lists.
+12. **No booking email notifications** to the guest or owner.
+13. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
 
 #### Reassigning legacy data
 

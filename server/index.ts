@@ -1,5 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
+import { registerRoutes, INTERNAL_ERROR } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
@@ -63,12 +63,13 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
+    if (status >= 500) {
+      console.error(`${req.method} ${req.path} failed:`, err);
+    }
+    if (res.headersSent) return next(err);
+    res.status(status).json({ error: status >= 500 ? INTERNAL_ERROR : err.message });
   });
 
   // importantly only setup vite in development and after

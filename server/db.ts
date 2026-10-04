@@ -13,4 +13,9 @@ export const pool = new Pool({
   }
 });
 
+// Without a listener, an idle connection dropped by the server crashes the process.
+pool.on("error", (err) => {
+  console.error("Idle database connection error:", err.message);
+});
+
 export const db = drizzle({ client: pool, schema });

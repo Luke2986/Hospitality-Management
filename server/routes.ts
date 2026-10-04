@@ -35,7 +35,8 @@ const guestBookingSchema = insertBookingSchema.pick({
 });
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const ROOM_UNAVAILABLE = "La camera non è disponibile per le date selezionate";
+export const INTERNAL_ERROR = "Errore interno del server";
+const ROOM_UNAVAILABLE ="La camera non è disponibile per le date selezionate";
 
 function sendError(res: Response, error: any) {
   if (error?.name === "ZodError") {
@@ -44,7 +45,8 @@ function sendError(res: Response, error: any) {
   if (error instanceof HttpError) {
     return res.status(error.status).json({ error: error.message });
   }
-  res.status(500).json({ error: error.message });
+  console.error(`${res.req.method} ${res.req.path} failed:`, error);
+  res.status(500).json({ error: INTERNAL_ERROR });
 }
 
 class HttpError extends Error {
