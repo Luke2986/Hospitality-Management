@@ -25,6 +25,13 @@ export const authTokens = pgTable("auth_tokens", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// Fixed-window request counters shared by all server instances
+export const rateLimits = pgTable("rate_limits", {
+  key: varchar("key", { length: 200 }).primaryKey(),
+  count: integer("count").notNull(),
+  resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
+});
+
 // Properties table
 export const properties = pgTable("properties", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),

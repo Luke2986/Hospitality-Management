@@ -106,7 +106,7 @@ Elenco da risolvere. Ordinato per gravità.
 
 **Sicurezza**
 
-1. **Rate limiting solo in memoria**: vale per singolo processo e si azzera al riavvio; nessun CAPTCHA sulle prenotazioni pubbliche.
+1. **Nessun CAPTCHA sulle prenotazioni pubbliche**: oltre al limite per IP non c'è protezione dai bot.
 2. **Log con dati personali.** I log delle richieste includono il corpo delle risposte JSON (email, nomi, telefoni degli ospiti).
 3. **Nessuna protezione CSRF esplicita**: ci si affida a `SameSite=Lax` sul cookie di sessione.
 
@@ -272,7 +272,7 @@ To be fixed. Ordered by severity.
 
 **Security**
 
-1. **In-memory rate limiting only**: per process and reset on restart; no CAPTCHA on public bookings.
+1. **No CAPTCHA on public bookings**: apart from the per-IP limit there is no bot protection.
 2. **Personal data in logs.** Request logs include JSON response bodies (guest emails, names, phone numbers).
 3. **No explicit CSRF protection**: relies on `SameSite=Lax` on the session cookie.
 

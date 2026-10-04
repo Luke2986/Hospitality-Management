@@ -81,23 +81,31 @@ function toPublicUser(user: User): PublicUser {
   return { id: user.id, email: user.email, fullName: user.fullName };
 }
 
-// Minimal in-memory fixed-window limiter; per-process only, good enough for a single instance.
-export function rateLimit({ windowMs, max }: { windowMs: number; max: number }) {
-  const hits = new Map<string, { count: number; resetAt: number }>();
-  return (req: Request, res: Response, next: NextFunction) => {
-    const now = Date.now();
-    const key = req.ip ?? "unknown";
-    const entry = hits.get(key);
-    if (!entry || entry.resetAt <= now) {
-      hits.set(key, { count: 1, resetAt: now + windowMs });
-      return next();
+// Fixed-window limiter stored in Postgres, so limits hold across restarts and multiple instances.
+export function rateLimit({ name, windowMs, max }: { name: string; windowMs: number; max: number }) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { rows } = await pool.query<{ count: number; reset_at: Date }>(
+        `INSERT INTO rate_limits (key, count, reset_at)
+         VALUES ($1, 1, now() + $2 * interval '1 millisecond')
+         ON CONFLICT (key) DO UPDATE SET
+           count = CASE WHEN rate_limits.reset_at <= now() THEN 1 ELSE rate_limits.count + 1 END,
+           reset_at = CASE WHEN rate_limits.reset_at <= now() THEN EXCLUDED.reset_at ELSE rate_limits.reset_at END
+         RETURNING count, reset_at`,
+        [`${name}:${req.ip ?? "unknown"}`, windowMs],
+      );
+      if (Math.random() < 0.01) {
+        pool.query("DELETE FROM rate_limits WHERE reset_at < now()").catch(() => {});
+      }
+      const { count, reset_at } = rows[0];
+      if (count > max) {
+        res.setHeader("Retry-After", Math.max(1, Math.ceil((reset_at.getTime() - Date.now()) / 1000)).toString());
+        return res.status(429).json({ error: "Troppi tentativi, riprova più tardi" });
+      }
+      next();
+    } catch (err) {
+      next(err);
     }
-    entry.count += 1;
-    if (entry.count > max) {
-      res.setHeader("Retry-After", Math.ceil((entry.resetAt - now) / 1000).toString());
-      return res.status(429).json({ error: "Troppi tentativi, riprova più tardi" });
-    }
-    next();
   };
 }
 
@@ -180,8 +188,8 @@ export function setupAuth(app: Express) {
     }
   });
 
-  const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
-  const emailLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5 });
+  const authLimiter = rateLimit({ name: "auth", windowMs: 15 * 60 * 1000, max: 20 });
+  const emailLimiter = rateLimit({ name: "email", windowMs: 60 * 60 * 1000, max: 5 });
 
   // Same response whether or not the email is already registered, to avoid account enumeration.
   app.post("/api/auth/signup", authLimiter, async (req, res, next) => {

@@ -84,7 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Public widget endpoints
-  const bookingLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10 });
+  const bookingLimiter = rateLimit({ name: "booking", windowMs: 60 * 60 * 1000, max: 10 });
 
   app.get("/api/widget/properties/:propertyId", async (req: Request, res: Response) => {
     try {
