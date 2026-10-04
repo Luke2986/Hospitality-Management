@@ -6,14 +6,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Link, useLocation } from "wouter";
+import { Link, Redirect, useLocation } from "wouter";
+import { useAuth, AUTH_QUERY_KEY } from "@/hooks/use-auth";
 import { UserPlus } from "lucide-react";
 
 const signupSchema = z.object({
   email: z.string().email("Indirizzo email non valido"),
-  password: z.string().min(6, "La password deve contenere almeno 6 caratteri"),
+  password: z.string().min(8, "La password deve contenere almeno 8 caratteri"),
   fullName: z.string().min(2, "Il nome completo deve contenere almeno 2 caratteri"),
 });
 
@@ -22,6 +23,7 @@ type SignupForm = z.infer<typeof signupSchema>;
 export default function Signup() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
 
   const form = useForm<SignupForm>({
     resolver: zodResolver(signupSchema),
@@ -34,9 +36,11 @@ export default function Signup() {
 
   const signupMutation = useMutation({
     mutationFn: async (data: SignupForm) => {
-      return apiRequest("POST", "/api/auth/signup", data);
+      const res = await apiRequest("POST", "/api/auth/signup", data);
+      return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (user) => {
+      queryClient.setQueryData(AUTH_QUERY_KEY, user);
       toast({
         title: "Successo",
         description: "Account creato con successo",
@@ -55,6 +59,10 @@ export default function Signup() {
   const onSubmit = (data: SignupForm) => {
     signupMutation.mutate(data);
   };
+
+  if (user) {
+    return <Redirect to="/dashboard" />;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">

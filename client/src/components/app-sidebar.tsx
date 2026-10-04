@@ -1,7 +1,8 @@
-import { Home, Building2, Bed, Calendar, Settings, BookOpen, CalendarDays } from "lucide-react";
+import { Home, Building2, Bed, Calendar, Settings, BookOpen, CalendarDays, LogOut } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -10,6 +11,8 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 const menuItems = [
   {
@@ -50,7 +53,17 @@ const menuItems = [
 ];
 
 export function AppSidebar() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+  const { user } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await apiRequest("POST", "/api/auth/logout");
+    } finally {
+      queryClient.clear();
+      setLocation("/login");
+    }
+  };
 
   return (
     <Sidebar>
@@ -79,6 +92,21 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        {user && (
+          <div className="px-2 text-xs text-muted-foreground truncate" data-testid="text-user-email">
+            {user.email}
+          </div>
+        )}
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={handleLogout} data-testid="button-logout">
+              <LogOut />
+              <span>Esci</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }

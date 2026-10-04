@@ -1,10 +1,11 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { useAuth } from "@/hooks/use-auth";
 
 import Home from "@/pages/home";
 import Login from "@/pages/login";
@@ -15,12 +16,20 @@ import RoomsManagement from "@/pages/rooms-management";
 import Bookings from "@/pages/bookings";
 import Events from "@/pages/events";
 import Settings from "@/pages/settings";
-import BookingWidget from "@/pages/booking-widget";
 import WidgetEmbed from "@/pages/widget-embed";
 import CalendarPage from "@/pages/calendar";
 import NotFound from "@/pages/not-found";
 
 function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="flex h-screen items-center justify-center text-muted-foreground">Caricamento...</div>;
+  }
+  if (!user) {
+    return <Redirect to="/login" />;
+  }
+
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full">
@@ -44,7 +53,6 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
-      <Route path="/widget" component={BookingWidget} />
       <Route path="/widget/:propertyId">
         {(params) => <WidgetEmbed propertyId={params.propertyId} />}
       </Route>

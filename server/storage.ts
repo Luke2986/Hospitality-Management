@@ -1,4 +1,4 @@
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, inArray, type SQL } from "drizzle-orm";
 import { db } from "./db";
 import { 
   users, 
@@ -26,14 +26,13 @@ export interface IStorage {
 
   // Properties
   getProperties(ownerId: string): Promise<Property[]>;
-  getAllActiveProperties(): Promise<Property[]>;
   getProperty(id: string): Promise<Property | undefined>;
   createProperty(property: InsertProperty): Promise<Property>;
   updateProperty(id: string, data: Partial<InsertProperty>): Promise<Property | undefined>;
   deleteProperty(id: string): Promise<void>;
 
   // Rooms
-  getRooms(propertyId?: string): Promise<Room[]>;
+  getRooms(filters?: { propertyId?: string; ownerId?: string }): Promise<Room[]>;
   getRoom(id: string): Promise<Room | undefined>;
   createRoom(room: InsertRoom): Promise<Room>;
   updateRoom(id: string, data: Partial<InsertRoom>): Promise<Room | undefined>;
@@ -41,6 +40,7 @@ export interface IStorage {
 
   // Bookings
   getBookings(filters?: {
+    ownerId?: string;
     propertyId?: string;
     roomId?: string;
     status?: string;
@@ -54,11 +54,15 @@ export interface IStorage {
   deleteBooking(id: string): Promise<void>;
 
   // Events
-  getEvents(propertyId?: string): Promise<Event[]>;
+  getEvents(filters?: { propertyId?: string; ownerId?: string }): Promise<Event[]>;
   getEvent(id: string): Promise<Event | undefined>;
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: string, data: Partial<InsertEvent>): Promise<Event | undefined>;
   deleteEvent(id: string): Promise<void>;
+}
+
+function ownedPropertyIds(ownerId: string) {
+  return db.select({ id: properties.id }).from(properties).where(eq(properties.ownerId, ownerId));
 }
 
 export class DatabaseStorage implements IStorage {
@@ -81,10 +85,6 @@ export class DatabaseStorage implements IStorage {
   // Properties
   async getProperties(ownerId: string): Promise<Property[]> {
     return db.select().from(properties).where(eq(properties.ownerId, ownerId)).orderBy(desc(properties.createdAt));
-  }
-
-  async getAllActiveProperties(): Promise<Property[]> {
-    return db.select().from(properties).where(eq(properties.active, true)).orderBy(desc(properties.createdAt));
   }
 
   async getProperty(id: string): Promise<Property | undefined> {
@@ -110,11 +110,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Rooms
-  async getRooms(propertyId?: string): Promise<Room[]> {
-    if (propertyId) {
-      return db.select().from(rooms).where(eq(rooms.propertyId, propertyId)).orderBy(desc(rooms.createdAt));
-    }
-    return db.select().from(rooms).orderBy(desc(rooms.createdAt));
+  async getRooms(filters?: { propertyId?: string; ownerId?: string }): Promise<Room[]> {
+    const conditions: SQL[] = [];
+    if (filters?.propertyId) conditions.push(eq(rooms.propertyId, filters.propertyId));
+    if (filters?.ownerId) conditions.push(inArray(rooms.propertyId, ownedPropertyIds(filters.ownerId)));
+    return db.select().from(rooms).where(and(...conditions)).orderBy(desc(rooms.createdAt));
   }
 
   async getRoom(id: string): Promise<Room | undefined> {
@@ -141,6 +141,7 @@ export class DatabaseStorage implements IStorage {
 
   // Bookings
   async getBookings(filters?: {
+    ownerId?: string;
     propertyId?: string;
     roomId?: string;
     status?: string;
@@ -148,8 +149,11 @@ export class DatabaseStorage implements IStorage {
     checkInFrom?: string;
     checkInTo?: string;
   }): Promise<Booking[]> {
-    const conditions = [];
-    
+    const conditions: SQL[] = [];
+
+    if (filters?.ownerId) {
+      conditions.push(inArray(bookings.propertyId, ownedPropertyIds(filters.ownerId)));
+    }
     if (filters?.propertyId) {
       conditions.push(eq(bookings.propertyId, filters.propertyId));
     }
@@ -198,11 +202,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Events
-  async getEvents(propertyId?: string): Promise<Event[]> {
-    if (propertyId) {
-      return db.select().from(events).where(eq(events.propertyId, propertyId)).orderBy(desc(events.eventDate));
-    }
-    return db.select().from(events).orderBy(desc(events.eventDate));
+  async getEvents(filters?: { propertyId?: string; ownerId?: string }): Promise<Event[]> {
+    const conditions: SQL[] = [];
+    if (filters?.propertyId) conditions.push(eq(events.propertyId, filters.propertyId));
+    if (filters?.ownerId) conditions.push(inArray(events.propertyId, ownedPropertyIds(filters.ownerId)));
+    return db.select().from(events).where(and(...conditions)).orderBy(desc(events.eventDate));
   }
 
   async getEvent(id: string): Promise<Event | undefined> {

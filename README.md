@@ -12,7 +12,8 @@ Gestionale web per piccole strutture ricettive (B&B, agriturismi, case vacanza).
 
 ### Funzionalità
 
-- **Dashboard** (`/dashboard`): gestione di strutture, camere, prenotazioni ed eventi locali, calendario e impostazioni.
+- **Account** (`/signup`, `/login`): ogni proprietario vede e modifica solo le proprie strutture e i dati collegati.
+- **Dashboard** (`/dashboard`, richiede login): gestione di strutture, camere, prenotazioni ed eventi locali, calendario e impostazioni.
 - **Calendario di prenotazione** (`/dashboard/calendario`): doppio mese con selezione del periodo, eventi locali filtrabili per categoria, camere disponibili con prezzo calcolato (notti × tariffa) e modal di prenotazione.
 - **Widget incorporabile** (`/widget/:propertyId`): la stessa esperienza del calendario, caricata in un iframe che si ridimensiona da solo tramite `client/public/widget.js`. Le impostazioni generano il codice di incorporamento.
 - **Eventi locali**: categorie `sagra`, `concerto`, `fiera`, `sport`, `religioso`, `cultura`, `mercato`, `altro`.
@@ -22,7 +23,7 @@ Gestionale web per piccole strutture ricettive (B&B, agriturismi, case vacanza).
 | Livello | Tecnologie |
 |---|---|
 | Frontend | React 18, TypeScript, Vite, Wouter, TanStack Query, React Hook Form + Zod, Tailwind CSS, shadcn/ui |
-| Backend | Node.js, Express, TypeScript |
+| Backend | Node.js, Express, TypeScript, Passport (sessioni su PostgreSQL) |
 | Database | PostgreSQL (pensato per Neon), Drizzle ORM / Drizzle Kit |
 
 ### Requisiti
@@ -37,17 +38,19 @@ git clone https://github.com/Luke2986/Hospitality-Management.git
 cd Hospitality-Management
 npm install
 export DATABASE_URL="postgres://utente:password@host:5432/nomedb"
+export SESSION_SECRET="$(openssl rand -hex 32)"
 npm run db:push
 npm run dev
 ```
 
-L'app (API e client) risponde su `http://localhost:5000`.
+L'app (API e client) risponde su `http://localhost:5000`. Crea un account da `/signup`.
 
 ### Variabili d'ambiente
 
 | Variabile | Obbligatoria | Descrizione |
 |---|---|---|
 | `DATABASE_URL` | sì | Stringa di connessione PostgreSQL |
+| `SESSION_SECRET` | sì in produzione | Chiave per firmare il cookie di sessione. In sviluppo, se manca, ne viene generata una casuale a ogni avvio |
 | `PORT` | no | Porta del server (default `5000`) |
 
 ### Script
@@ -71,21 +74,24 @@ Per usare un dominio diverso da quello della pagina, definire prima `window.BOOK
 
 ### API
 
-Tutte le rotte sono sotto `/api` e restituiscono JSON.
+Tutte le rotte sono sotto `/api` e restituiscono JSON. Le rotte del widget e di autenticazione sono pubbliche; tutte le altre richiedono una sessione e operano solo sui dati del proprietario.
 
 | Risorsa | Rotte |
 |---|---|
+| Autenticazione | `POST /api/auth/signup`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` |
 | Strutture | `GET/POST /api/properties`, `PATCH/DELETE /api/properties/:id` |
 | Camere | `GET/POST /api/rooms`, `PATCH/DELETE /api/rooms/:id` |
 | Prenotazioni | `GET/POST /api/bookings`, `PATCH/DELETE /api/bookings/:id` |
 | Eventi | `GET/POST /api/events`, `PATCH/DELETE /api/events/:id` |
-| Widget | `GET /api/widget/properties/:propertyId` |
+| Widget (pubblico) | `GET /api/widget/properties/:propertyId`, `POST /api/widget/bookings`, `POST /api/widget/bookings/:id/cancel` |
+
+Le prenotazioni dal widget nascono sempre `pending` e il prezzo totale è calcolato dal server.
 
 ### Struttura del progetto
 
 ```
 client/      Frontend React (pagine, componenti, widget.js)
-server/      Express: routes.ts, storage.ts (Drizzle), db.ts, index.ts
+server/      Express: auth.ts, routes.ts, storage.ts (Drizzle), db.ts, index.ts
 shared/      Schema Drizzle e schemi Zod condivisi
 migrations/  Migrazioni generate da Drizzle Kit
 attached_assets/  File di riferimento e screenshot (non usati dall'app)
@@ -95,37 +101,43 @@ attached_assets/  File di riferimento e screenshot (non usati dall'app)
 
 Elenco da risolvere. Ordinato per gravità.
 
-**Sicurezza (critici)**
+**Sicurezza**
 
-1. **Nessuna autenticazione sulle API.** Chiunque conosca l'URL può leggere, modificare ed eliminare strutture, camere, prenotazioni (con dati personali degli ospiti) ed eventi.
-2. **Nessuna autorizzazione né multi-tenant.** Tutte le strutture appartengono a un utente di sistema fisso (`00000000-0000-0000-0000-000000000000`); `GET /api/properties` e `GET /api/bookings` restituiscono i dati di tutti.
-3. **Mass assignment sui `PATCH`.** `req.body` viene passato direttamente a `storage.update*` senza validazione Zod: si possono sovrascrivere campi come `ownerId`, `propertyId`, `status`, `totalPrice`.
-4. **`totalPrice` deciso dal client.** Il prezzo totale della prenotazione arriva dal body e non viene ricalcolato dal server.
-5. **CORS aperto (`*`) e `frame-ancestors *`** su `/widget`, `/api/widget` e su qualunque percorso che termini in `.js` o `.html`; `widget.js` ha il controllo dell'origine dei messaggi commentato.
-6. **TLS al database senza verifica** (`rejectUnauthorized: false` in `server/db.ts`).
-7. **Nessun rate limiting, nessun CAPTCHA** sulla creazione di prenotazioni pubbliche: possibile spam.
-8. **Messaggi d'errore interni esposti** (`error.message` restituito al client) e log che includono il corpo delle risposte JSON, con dati personali.
+1. **CORS aperto (`*`) e `frame-ancestors *`** su `/widget`, `/api/widget` e su qualunque percorso che termini in `.js` o `.html`; `widget.js` ha il controllo dell'origine dei messaggi commentato.
+2. **TLS al database senza verifica** (`rejectUnauthorized: false` in `server/db.ts`).
+3. **Rate limiting solo in memoria**: vale per singolo processo e si azzera al riavvio; nessun CAPTCHA sulle prenotazioni pubbliche.
+4. **Messaggi d'errore interni esposti** (`error.message` restituito al client) e log che includono il corpo delle risposte JSON, con dati personali.
+5. **Nessuna protezione CSRF esplicita**: ci si affida a `SameSite=Lax` sul cookie di sessione.
 
-**Correttezza (alti)**
+**Correttezza**
 
-9. **Login e registrazione non funzionanti.** `login.tsx`, `signup.tsx` e `settings.tsx` chiamano `/api/auth/login`, `/api/auth/signup` e `/api/auth/me`, che non esistono. Passport, express-session e connect-pg-simple sono installati ma mai usati.
-10. **Nessun controllo di disponibilità.** Si possono creare prenotazioni sovrapposte sulla stessa camera; non si verifica `checkOut > checkIn`, né `guestsCount <= maxGuests`, né `isAvailable` lato server.
-11. **Race condition** sulla creazione di prenotazioni (nessuna transazione né vincolo di esclusione sulle date).
-12. **Gestione errori incoerente.** I `DELETE` rispondono sempre `success` anche se la risorsa non esiste; il gestore errori globale rilancia l'errore dopo aver risposto (`throw err`), con rischio di crash del processo.
-13. **Filtri senza validazione.** I parametri di query sono castati a stringa senza controllo; un `id` non-UUID genera un errore 500 invece di 400.
-14. **Soft-delete assente e cancellazioni a cascata.** Eliminare una struttura cancella camere, prenotazioni ed eventi senza conferma né backup.
+6. **Prenotazioni sovrapposte.** Nessun controllo di disponibilità sulla stessa camera nelle stesse date, né vincolo a livello di database (race condition).
+7. **Date spostate di un giorno.** `BookingModal` converte le date con `toISOString()`, che usa UTC: in Italia check-in e check-out risultano anticipati di un giorno.
+8. **Auto-resize del widget non funzionante.** La pagina del widget invia messaggi `type: 'resize'`, ma `widget.js` ascolta `booking-widget-resize`.
+9. **Avvio impossibile su macOS.** `server.listen` usa `reusePort: true`, non supportato (`ENOTSUP`).
+10. **Gestione errori incoerente.** Il gestore errori globale rilancia l'errore dopo aver risposto (`throw err`).
+11. **Soft-delete assente e cancellazioni a cascata.** Eliminare una struttura cancella camere, prenotazioni ed eventi senza backup.
+12. **Dati legacy orfani.** Le strutture create prima dell'autenticazione appartengono all'utente di sistema `00000000-0000-0000-0000-000000000000`, che non può accedere: vanno riassegnate a mano (vedi sotto).
 
-**Qualità e manutenzione (medi)**
+**Qualità e manutenzione**
 
-15. **Documentazione contraddittoria.** `replit.md` dichiara "nessuna autenticazione", ma esistono pagine e dipendenze di auth.
-16. **Nessun test automatico** (unit, integrazione, e2e) e nessuna CI.
-17. **Nessun `.env.example`** e nessuna validazione delle variabili d'ambiente all'avvio oltre a `DATABASE_URL`.
-18. **Funzionalità solo accennate nello schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` negli eventi non sono usate (nessuna importazione automatica).
-19. **Nessuna paginazione** su liste di camere, prenotazioni ed eventi.
-20. **Nessuna notifica email** all'ospite o al proprietario alla creazione di una prenotazione.
-21. **Rumore nel repository:** `attached_assets/` (screenshot, file di un altro progetto come `CarCard.tsx`, un archivio `.tar.gz`) e configurazione Replit (`.replit`) mescolati al codice.
-22. **Nessuna licenza esplicita** nel repository (`package.json` dichiara MIT, manca il file `LICENSE`).
-23. **Account e dati non conformi al GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
+13. **Documentazione obsoleta.** `replit.md` descrive ancora l'app come "senza autenticazione".
+14. **Nessun test automatico** (unit, integrazione, e2e) e nessuna CI.
+15. **Nessun `.env.example`.**
+16. **Funzionalità solo accennate nello schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` negli eventi non sono usate.
+17. **Nessuna paginazione** su liste di camere, prenotazioni ed eventi.
+18. **Nessuna notifica email** all'ospite o al proprietario; nessun recupero password.
+19. **Rumore nel repository:** `attached_assets/` (screenshot, file di un altro progetto come `CarCard.tsx`, un archivio `.tar.gz`) e configurazione Replit (`.replit`) mescolati al codice.
+20. **Nessuna licenza esplicita** (`package.json` dichiara MIT, manca il file `LICENSE`).
+21. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
+
+#### Riassegnare i dati legacy
+
+```sql
+UPDATE properties
+SET owner_id = (SELECT id FROM users WHERE email = 'tua@email.it')
+WHERE owner_id = '00000000-0000-0000-0000-000000000000';
+```
 
 ---
 
@@ -137,7 +149,8 @@ Web-based management system for small hospitality businesses (B&Bs, farm stays, 
 
 ### Features
 
-- **Dashboard** (`/dashboard`): manage properties, rooms, bookings and local events, plus calendar and settings.
+- **Accounts** (`/signup`, `/login`): each owner can only see and edit their own properties and related data.
+- **Dashboard** (`/dashboard`, login required): manage properties, rooms, bookings and local events, plus calendar and settings.
 - **Booking calendar** (`/dashboard/calendario`): dual-month date-range picker, local events filterable by category, available rooms with computed price (nights × rate), and a booking modal.
 - **Embeddable widget** (`/widget/:propertyId`): the same calendar experience loaded in an iframe that auto-resizes through `client/public/widget.js`. The settings page generates the embed code.
 - **Local events**: categories `sagra`, `concerto`, `fiera`, `sport`, `religioso`, `cultura`, `mercato`, `altro`.
@@ -147,7 +160,7 @@ Web-based management system for small hospitality businesses (B&Bs, farm stays, 
 | Layer | Technologies |
 |---|---|
 | Frontend | React 18, TypeScript, Vite, Wouter, TanStack Query, React Hook Form + Zod, Tailwind CSS, shadcn/ui |
-| Backend | Node.js, Express, TypeScript |
+| Backend | Node.js, Express, TypeScript, Passport (PostgreSQL-backed sessions) |
 | Database | PostgreSQL (designed for Neon), Drizzle ORM / Drizzle Kit |
 
 ### Requirements
@@ -162,17 +175,19 @@ git clone https://github.com/Luke2986/Hospitality-Management.git
 cd Hospitality-Management
 npm install
 export DATABASE_URL="postgres://user:password@host:5432/dbname"
+export SESSION_SECRET="$(openssl rand -hex 32)"
 npm run db:push
 npm run dev
 ```
 
-The app (API and client) is served at `http://localhost:5000`.
+The app (API and client) is served at `http://localhost:5000`. Create an account at `/signup`.
 
 ### Environment variables
 
 | Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | yes | PostgreSQL connection string |
+| `SESSION_SECRET` | yes in production | Key used to sign the session cookie. In development a random one is generated on each start if missing |
 | `PORT` | no | Server port (default `5000`) |
 
 ### Scripts
@@ -196,21 +211,24 @@ To load the widget from a different domain than the host page, define `window.BO
 
 ### API
 
-All routes live under `/api` and return JSON.
+All routes live under `/api` and return JSON. Widget and auth routes are public; every other route requires a session and only touches the owner's data.
 
 | Resource | Routes |
 |---|---|
+| Auth | `POST /api/auth/signup`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` |
 | Properties | `GET/POST /api/properties`, `PATCH/DELETE /api/properties/:id` |
 | Rooms | `GET/POST /api/rooms`, `PATCH/DELETE /api/rooms/:id` |
 | Bookings | `GET/POST /api/bookings`, `PATCH/DELETE /api/bookings/:id` |
 | Events | `GET/POST /api/events`, `PATCH/DELETE /api/events/:id` |
-| Widget | `GET /api/widget/properties/:propertyId` |
+| Widget (public) | `GET /api/widget/properties/:propertyId`, `POST /api/widget/bookings`, `POST /api/widget/bookings/:id/cancel` |
+
+Widget bookings are always created as `pending`, and the total price is computed server-side.
 
 ### Project structure
 
 ```
 client/      React frontend (pages, components, widget.js)
-server/      Express: routes.ts, storage.ts (Drizzle), db.ts, index.ts
+server/      Express: auth.ts, routes.ts, storage.ts (Drizzle), db.ts, index.ts
 shared/      Drizzle schema and shared Zod schemas
 migrations/  Migrations generated by Drizzle Kit
 attached_assets/  Reference files and screenshots (not used by the app)
@@ -220,34 +238,40 @@ attached_assets/  Reference files and screenshots (not used by the app)
 
 To be fixed. Ordered by severity.
 
-**Security (critical)**
+**Security**
 
-1. **No authentication on the API.** Anyone who knows the URL can read, modify and delete properties, rooms, bookings (including guests' personal data) and events.
-2. **No authorization or multi-tenancy.** All properties belong to a hardcoded system user (`00000000-0000-0000-0000-000000000000`); `GET /api/properties` and `GET /api/bookings` return everyone's data.
-3. **Mass assignment on `PATCH`.** `req.body` is passed straight to `storage.update*` with no Zod validation, so fields such as `ownerId`, `propertyId`, `status` and `totalPrice` can be overwritten.
-4. **Client-controlled `totalPrice`.** The booking total comes from the request body and is never recomputed server-side.
-5. **Wide-open CORS (`*`) and `frame-ancestors *`** on `/widget`, `/api/widget`, and any path ending in `.js` or `.html`; the message-origin check in `widget.js` is commented out.
-6. **Unverified TLS to the database** (`rejectUnauthorized: false` in `server/db.ts`).
-7. **No rate limiting or CAPTCHA** on public booking creation: spam is possible.
-8. **Internal error messages leaked** (`error.message` returned to clients) and request logs that include JSON response bodies containing personal data.
+1. **Wide-open CORS (`*`) and `frame-ancestors *`** on `/widget`, `/api/widget`, and any path ending in `.js` or `.html`; the message-origin check in `widget.js` is commented out.
+2. **Unverified TLS to the database** (`rejectUnauthorized: false` in `server/db.ts`).
+3. **In-memory rate limiting only**: per process and reset on restart; no CAPTCHA on public bookings.
+4. **Internal error messages leaked** (`error.message` returned to clients) and request logs that include JSON response bodies containing personal data.
+5. **No explicit CSRF protection**: relies on `SameSite=Lax` on the session cookie.
 
-**Correctness (high)**
+**Correctness**
 
-9. **Login and signup do not work.** `login.tsx`, `signup.tsx` and `settings.tsx` call `/api/auth/login`, `/api/auth/signup` and `/api/auth/me`, which do not exist. Passport, express-session and connect-pg-simple are installed but never used.
-10. **No availability check.** Overlapping bookings can be created for the same room; the server does not verify `checkOut > checkIn`, `guestsCount <= maxGuests`, or `isAvailable`.
-11. **Race condition** on booking creation (no transaction or date-range exclusion constraint).
-12. **Inconsistent error handling.** `DELETE` always answers `success` even when the resource does not exist; the global error handler rethrows after responding (`throw err`), which can crash the process.
-13. **Unvalidated query filters.** Query params are cast to string without checks; a non-UUID `id` yields a 500 instead of a 400.
-14. **No soft delete, cascading hard deletes.** Deleting a property wipes its rooms, bookings and events with no confirmation or backup.
+6. **Overlapping bookings.** No availability check for the same room on the same dates, and no database constraint (race condition).
+7. **Dates shifted by one day.** `BookingModal` converts dates with `toISOString()`, which uses UTC: in Italy check-in and check-out end up one day early.
+8. **Widget auto-resize is broken.** The widget page posts `type: 'resize'` messages, but `widget.js` listens for `booking-widget-resize`.
+9. **Cannot start on macOS.** `server.listen` uses `reusePort: true`, which is unsupported there (`ENOTSUP`).
+10. **Inconsistent error handling.** The global error handler rethrows after responding (`throw err`).
+11. **No soft delete, cascading hard deletes.** Deleting a property wipes its rooms, bookings and events with no backup.
+12. **Orphaned legacy data.** Properties created before authentication belong to the system user `00000000-0000-0000-0000-000000000000`, which cannot log in: reassign them manually (see below).
 
-**Quality and maintenance (medium)**
+**Quality and maintenance**
 
-15. **Contradictory docs.** `replit.md` says "no authentication", yet auth pages and dependencies exist.
-16. **No automated tests** (unit, integration, e2e) and no CI.
-17. **No `.env.example`**, and no environment validation at startup beyond `DATABASE_URL`.
-18. **Half-built features in the schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` on events are unused (no automatic import exists).
-19. **No pagination** on room, booking and event lists.
-20. **No email notifications** to the guest or owner when a booking is created.
-21. **Repository noise:** `attached_assets/` (screenshots, files from another project such as `CarCard.tsx`, a `.tar.gz` archive) and Replit config (`.replit`) mixed in with the code.
-22. **No explicit license file** (`package.json` declares MIT, but there is no `LICENSE`).
-23. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
+13. **Outdated docs.** `replit.md` still describes the app as having "no authentication".
+14. **No automated tests** (unit, integration, e2e) and no CI.
+15. **No `.env.example`.**
+16. **Half-built features in the schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` on events are unused.
+17. **No pagination** on room, booking and event lists.
+18. **No email notifications** to the guest or owner; no password reset.
+19. **Repository noise:** `attached_assets/` (screenshots, files from another project such as `CarCard.tsx`, a `.tar.gz` archive) and Replit config (`.replit`) mixed in with the code.
+20. **No explicit license file** (`package.json` declares MIT, but there is no `LICENSE`).
+21. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
+
+#### Reassigning legacy data
+
+```sql
+UPDATE properties
+SET owner_id = (SELECT id FROM users WHERE email = 'you@example.com')
+WHERE owner_id = '00000000-0000-0000-0000-000000000000';
+```

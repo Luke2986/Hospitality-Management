@@ -32,7 +32,7 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
 
   const createBookingMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest('POST', '/api/bookings', data);
+      const response = await apiRequest('POST', '/api/widget/bookings', data);
       return response.json();
     },
     onSuccess: (data) => {
@@ -57,7 +57,7 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
 
   const cancelBookingMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await apiRequest('PATCH', `/api/bookings/${id}`, { status: 'cancelled' });
+      const response = await apiRequest('POST', `/api/widget/bookings/${id}/cancel`);
       return response.json();
     },
     onSuccess: () => {
@@ -89,20 +89,14 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
       return;
     }
 
-    const pricePerNight = parseFloat(room.pricePerNight);
-    const totalPrice = pricePerNight * nights;
-
     createBookingMutation.mutate({
       roomId: room.id,
-      propertyId: room.propertyId,
       guestName: guestData.name,
       guestEmail: guestData.email,
       guestPhone: guestData.phone,
       checkIn: selectedDates.from.toISOString().split('T')[0],
       checkOut: selectedDates.to.toISOString().split('T')[0],
       guestsCount: guestData.guests,
-      totalPrice: totalPrice.toString(),
-      status: 'confirmed'
     });
   };
 
@@ -136,7 +130,7 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
               <h3 className="text-lg md:text-xl font-bold text-foreground">
                   {step === 'form' && 'Completa i tuoi dati'}
                   {step === 'review' && 'Riepilogo e Conferma'}
-                  {step === 'success' && (isCancelled ? 'Prenotazione Annullata' : 'Prenotazione Confermata!')}
+                  {step === 'success' && (isCancelled ? 'Prenotazione Annullata' : 'Richiesta Inviata!')}
               </h3>
             </div>
             <button 
@@ -322,8 +316,8 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
                         </div>
                         <h4 className="text-xl md:text-2xl font-bold text-foreground mb-2">Grazie, {guestData.name.split(' ')[0]}!</h4>
                         <p className="text-sm md:text-base text-muted-foreground mb-8">
-                          La tua prenotazione per <span className="font-medium text-foreground">{guestData.guests} {guestData.guests === 1 ? 'persona' : 'persone'}</span> è stata confermata con successo. <br className="hidden md:block"/>
-                          Abbiamo inviato una email di riepilogo a <span className="font-medium text-foreground block md:inline">{guestData.email}</span>.
+                          La tua prenotazione per <span className="font-medium text-foreground">{guestData.guests} {guestData.guests === 1 ? 'persona' : 'persone'}</span> è stata inviata ed è in attesa di conferma. <br className="hidden md:block"/>
+                          La struttura ti contatterà a <span className="font-medium text-foreground block md:inline">{guestData.email}</span>.
                         </p>
                         
                         {!showCancelConfirm ? (
@@ -382,8 +376,7 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
                         </div>
                         <h4 className="text-xl md:text-2xl font-bold text-foreground mb-2">Prenotazione Annullata</h4>
                         <p className="text-sm md:text-base text-muted-foreground mb-8">
-                          La prenotazione è stata cancellata come richiesto. <br/>
-                          Riceverai una conferma di cancellazione via email.
+                          La prenotazione è stata cancellata come richiesto.
                         </p>
                         <Button 
                           onClick={onClose} 

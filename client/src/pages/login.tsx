@@ -6,14 +6,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Link, useLocation } from "wouter";
+import { Link, Redirect, useLocation } from "wouter";
+import { useAuth, AUTH_QUERY_KEY } from "@/hooks/use-auth";
 import { LogIn } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.string().email("Indirizzo email non valido"),
-  password: z.string().min(6, "La password deve contenere almeno 6 caratteri"),
+  password: z.string().min(8, "La password deve contenere almeno 8 caratteri"),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -21,6 +22,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 export default function Login() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -32,9 +34,11 @@ export default function Login() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginForm) => {
-      return apiRequest("POST", "/api/auth/login", data);
+      const res = await apiRequest("POST", "/api/auth/login", data);
+      return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (user) => {
+      queryClient.setQueryData(AUTH_QUERY_KEY, user);
       toast({
         title: "Successo",
         description: "Accesso effettuato con successo",
@@ -53,6 +57,10 @@ export default function Login() {
   const onSubmit = (data: LoginForm) => {
     loginMutation.mutate(data);
   };
+
+  if (user) {
+    return <Redirect to="/dashboard" />;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">

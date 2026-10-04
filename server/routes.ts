@@ -1,260 +1,364 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+import { z } from "zod";
 import { storage } from "./storage";
-import { 
+import { setupAuth, requireAuth, rateLimit } from "./auth";
+import {
   insertPropertySchema,
   insertRoomSchema,
   insertBookingSchema,
   insertEventSchema,
+  bookingStatusSchema,
+  type Room,
 } from "@shared/schema";
 import { fromError } from "zod-validation-error";
 
-export async function registerRoutes(app: Express): Promise<Server> {
+const uuidSchema = z.string().uuid();
 
-  // Properties routes
+const updatePropertySchema = insertPropertySchema.omit({ ownerId: true }).partial();
+const updateRoomSchema = insertRoomSchema.partial();
+const updateBookingSchema = z.object({
+  status: bookingStatusSchema,
+  notes: z.string().nullable(),
+}).partial();
+const updateEventSchema = insertEventSchema.partial();
+
+const guestBookingSchema = insertBookingSchema.pick({
+  roomId: true,
+  guestName: true,
+  guestEmail: true,
+  guestPhone: true,
+  checkIn: true,
+  checkOut: true,
+  guestsCount: true,
+  notes: true,
+});
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function sendError(res: Response, error: any) {
+  if (error?.name === "ZodError") {
+    return res.status(400).json({ error: fromError(error).toString() });
+  }
+  if (error instanceof HttpError) {
+    return res.status(error.status).json({ error: error.message });
+  }
+  res.status(500).json({ error: error.message });
+}
+
+class HttpError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+  }
+}
+
+function priceBooking(room: Room, checkIn: string, checkOut: string, guestsCount: number) {
+  const nights = Math.round((Date.parse(checkOut) - Date.parse(checkIn)) / DAY_MS);
+  if (!Number.isFinite(nights) || nights < 1) {
+    throw new HttpError(400, "La data di check-out deve essere successiva al check-in");
+  }
+  if (guestsCount < 1 || guestsCount > room.maxGuests) {
+    throw new HttpError(400, `La camera ospita al massimo ${room.maxGuests} ospiti`);
+  }
+  return (parseFloat(room.pricePerNight) * nights).toFixed(2);
+}
+
+async function ownsProperty(propertyId: string, userId: string) {
+  const property = await storage.getProperty(propertyId);
+  return property?.ownerId === userId;
+}
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  setupAuth(app);
+
+  for (const param of ["id", "propertyId"]) {
+    app.param(param, (_req, res, next, value) => {
+      if (!uuidSchema.safeParse(value).success) {
+        return res.status(404).json({ error: "Not found" });
+      }
+      next();
+    });
+  }
+
+  // Public widget endpoints
+  const bookingLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10 });
+
+  app.get("/api/widget/properties/:propertyId", async (req: Request, res: Response) => {
+    try {
+      const { propertyId } = req.params;
+      const property = await storage.getProperty(propertyId);
+      if (!property || !property.active) {
+        return res.status(404).json({ error: "Property not found" });
+      }
+
+      const allRooms = await storage.getRooms({ propertyId });
+      const rooms = allRooms.filter((room) => room.isAvailable);
+
+      const events = await storage.getEvents({ propertyId });
+      const sortedEvents = [...events].sort(
+        (a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime(),
+      );
+
+      const { ownerId: _ownerId, ...publicProperty } = property;
+      res.json({ property: publicProperty, rooms, events: sortedEvents });
+    } catch (error: any) {
+      sendError(res, error);
+    }
+  });
+
+  app.post("/api/widget/bookings", bookingLimiter, async (req: Request, res: Response) => {
+    try {
+      const data = guestBookingSchema.parse(req.body);
+      const room = await storage.getRoom(data.roomId);
+      if (!room || !room.isAvailable) {
+        return res.status(404).json({ error: "Room not found" });
+      }
+      const property = await storage.getProperty(room.propertyId);
+      if (!property?.active) {
+        return res.status(404).json({ error: "Room not found" });
+      }
+      const totalPrice = priceBooking(room, data.checkIn, data.checkOut, data.guestsCount);
+      const booking = await storage.createBooking({
+        ...data,
+        propertyId: room.propertyId,
+        totalPrice,
+        status: "pending",
+      });
+      res.status(201).json({
+        id: booking.id,
+        status: booking.status,
+        checkIn: booking.checkIn,
+        checkOut: booking.checkOut,
+        totalPrice: booking.totalPrice,
+      });
+    } catch (error: any) {
+      sendError(res, error);
+    }
+  });
+
+  // The booking id is only returned to the guest who created it, so it acts as a cancel token.
+  app.post("/api/widget/bookings/:id/cancel", bookingLimiter, async (req: Request, res: Response) => {
+    try {
+      const booking = await storage.getBooking(req.params.id);
+      if (!booking || booking.status !== "pending") {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+      await storage.updateBooking(booking.id, { status: "cancelled" });
+      res.json({ id: booking.id, status: "cancelled" });
+    } catch (error: any) {
+      sendError(res, error);
+    }
+  });
+
+  // Everything below requires an authenticated owner
+  app.use("/api", requireAuth);
+
+  // Properties
   app.get("/api/properties", async (req: Request, res: Response) => {
     try {
-      const properties = await storage.getAllActiveProperties();
-      res.json(properties);
+      res.json(await storage.getProperties(req.user!.id));
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      sendError(res, error);
     }
   });
 
   app.post("/api/properties", async (req: Request, res: Response) => {
     try {
-      // Use a default UUID for ownerId since we don't have authentication
-      const validatedData = insertPropertySchema.parse({
-        ...req.body,
-        ownerId: "00000000-0000-0000-0000-000000000000",
-      });
-      const property = await storage.createProperty(validatedData);
-      res.json(property);
+      const data = insertPropertySchema.parse({ ...req.body, ownerId: req.user!.id });
+      res.status(201).json(await storage.createProperty(data));
     } catch (error: any) {
-      if (error.name === "ZodError") {
-        return res.status(400).json({ error: fromError(error).toString() });
-      }
-      res.status(500).json({ error: error.message });
+      sendError(res, error);
     }
   });
 
   app.patch("/api/properties/:id", async (req: Request, res: Response) => {
     try {
-      const property = await storage.updateProperty(req.params.id, req.body);
-      if (!property) {
+      if (!(await ownsProperty(req.params.id, req.user!.id))) {
         return res.status(404).json({ error: "Property not found" });
       }
-      res.json(property);
+      const data = updatePropertySchema.parse(req.body);
+      res.json(await storage.updateProperty(req.params.id, data));
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      sendError(res, error);
     }
   });
 
   app.delete("/api/properties/:id", async (req: Request, res: Response) => {
     try {
+      if (!(await ownsProperty(req.params.id, req.user!.id))) {
+        return res.status(404).json({ error: "Property not found" });
+      }
       await storage.deleteProperty(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      sendError(res, error);
     }
   });
 
-  // Rooms routes
+  // Rooms
   app.get("/api/rooms", async (req: Request, res: Response) => {
     try {
-      const propertyId = req.query.propertyId as string | undefined;
-      const rooms = await storage.getRooms(propertyId);
-      res.json(rooms);
+      const propertyId = typeof req.query.propertyId === "string" ? req.query.propertyId : undefined;
+      res.json(await storage.getRooms({ propertyId, ownerId: req.user!.id }));
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      sendError(res, error);
     }
   });
 
   app.post("/api/rooms", async (req: Request, res: Response) => {
     try {
-      const validatedData = insertRoomSchema.parse(req.body);
-      const room = await storage.createRoom(validatedData);
-      res.json(room);
-    } catch (error: any) {
-      if (error.name === "ZodError") {
-        return res.status(400).json({ error: fromError(error).toString() });
+      const data = insertRoomSchema.parse(req.body);
+      if (!(await ownsProperty(data.propertyId, req.user!.id))) {
+        return res.status(404).json({ error: "Property not found" });
       }
-      res.status(500).json({ error: error.message });
+      res.status(201).json(await storage.createRoom(data));
+    } catch (error: any) {
+      sendError(res, error);
     }
   });
 
   app.patch("/api/rooms/:id", async (req: Request, res: Response) => {
     try {
-      const room = await storage.updateRoom(req.params.id, req.body);
-      if (!room) {
+      const room = await storage.getRoom(req.params.id);
+      if (!room || !(await ownsProperty(room.propertyId, req.user!.id))) {
         return res.status(404).json({ error: "Room not found" });
       }
-      res.json(room);
+      const data = updateRoomSchema.parse(req.body);
+      if (data.propertyId && !(await ownsProperty(data.propertyId, req.user!.id))) {
+        return res.status(404).json({ error: "Property not found" });
+      }
+      res.json(await storage.updateRoom(req.params.id, data));
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      sendError(res, error);
     }
   });
 
   app.delete("/api/rooms/:id", async (req: Request, res: Response) => {
     try {
+      const room = await storage.getRoom(req.params.id);
+      if (!room || !(await ownsProperty(room.propertyId, req.user!.id))) {
+        return res.status(404).json({ error: "Room not found" });
+      }
       await storage.deleteRoom(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      sendError(res, error);
     }
   });
 
-  // Bookings routes
+  // Bookings
   app.get("/api/bookings", async (req: Request, res: Response) => {
     try {
-      const filters = {
-        propertyId: req.query.propertyId as string | undefined,
-        roomId: req.query.roomId as string | undefined,
-        status: req.query.status as string | undefined,
-        guestName: req.query.guestName as string | undefined,
-        checkInFrom: req.query.checkInFrom as string | undefined,
-        checkInTo: req.query.checkInTo as string | undefined,
-      };
-      
-      const bookings = await storage.getBookings(filters);
-      res.json(bookings);
+      const q = (key: string) => (typeof req.query[key] === "string" ? (req.query[key] as string) : undefined);
+      res.json(
+        await storage.getBookings({
+          ownerId: req.user!.id,
+          propertyId: q("propertyId"),
+          roomId: q("roomId"),
+          status: q("status"),
+          guestName: q("guestName"),
+          checkInFrom: q("checkInFrom"),
+          checkInTo: q("checkInTo"),
+        }),
+      );
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      sendError(res, error);
     }
   });
 
   app.post("/api/bookings", async (req: Request, res: Response) => {
     try {
-      const validatedData = insertBookingSchema.parse(req.body);
-      
-      // Get the room to find its propertyId
-      const room = await storage.getRoom(validatedData.roomId);
-      if (!room) {
+      const data = insertBookingSchema.omit({ totalPrice: true }).parse(req.body);
+      const room = await storage.getRoom(data.roomId);
+      if (!room || !(await ownsProperty(room.propertyId, req.user!.id))) {
         return res.status(404).json({ error: "Room not found" });
       }
-      
-      // Add propertyId from the room
-      const bookingData = {
-        ...validatedData,
-        propertyId: room.propertyId,
-      };
-      
-      const booking = await storage.createBooking(bookingData);
-      res.json(booking);
+      const totalPrice = priceBooking(room, data.checkIn, data.checkOut, data.guestsCount);
+      res.status(201).json(await storage.createBooking({ ...data, propertyId: room.propertyId, totalPrice }));
     } catch (error: any) {
-      if (error.name === "ZodError") {
-        return res.status(400).json({ error: fromError(error).toString() });
-      }
-      res.status(500).json({ error: error.message });
+      sendError(res, error);
     }
   });
 
   app.patch("/api/bookings/:id", async (req: Request, res: Response) => {
     try {
-      const booking = await storage.updateBooking(req.params.id, req.body);
-      if (!booking) {
+      const booking = await storage.getBooking(req.params.id);
+      if (!booking || !(await ownsProperty(booking.propertyId, req.user!.id))) {
         return res.status(404).json({ error: "Booking not found" });
       }
-      res.json(booking);
+      const data = updateBookingSchema.parse(req.body);
+      res.json(await storage.updateBooking(req.params.id, data));
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      sendError(res, error);
     }
   });
 
   app.delete("/api/bookings/:id", async (req: Request, res: Response) => {
     try {
+      const booking = await storage.getBooking(req.params.id);
+      if (!booking || !(await ownsProperty(booking.propertyId, req.user!.id))) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
       await storage.deleteBooking(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      sendError(res, error);
     }
   });
 
-  // Events routes
+  // Events
   app.get("/api/events", async (req: Request, res: Response) => {
     try {
-      const propertyId = req.query.propertyId as string | undefined;
-      const events = await storage.getEvents(propertyId);
-      // Sort events chronologically by eventDate (using a copy to avoid mutating storage state)
-      const sortedEvents = [...events].sort((a, b) => {
-        const dateA = new Date(a.eventDate).getTime();
-        const dateB = new Date(b.eventDate).getTime();
-        return dateA - dateB;
-      });
-      res.json(sortedEvents);
+      const propertyId = typeof req.query.propertyId === "string" ? req.query.propertyId : undefined;
+      const events = await storage.getEvents({ propertyId, ownerId: req.user!.id });
+      res.json(
+        [...events].sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime()),
+      );
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      sendError(res, error);
     }
   });
 
   app.post("/api/events", async (req: Request, res: Response) => {
     try {
-      const validatedData = insertEventSchema.parse(req.body);
-      const event = await storage.createEvent(validatedData);
-      res.json(event);
-    } catch (error: any) {
-      if (error.name === "ZodError") {
-        return res.status(400).json({ error: fromError(error).toString() });
+      const data = insertEventSchema.parse(req.body);
+      if (!(await ownsProperty(data.propertyId, req.user!.id))) {
+        return res.status(404).json({ error: "Property not found" });
       }
-      res.status(500).json({ error: error.message });
+      res.status(201).json(await storage.createEvent(data));
+    } catch (error: any) {
+      sendError(res, error);
     }
   });
 
   app.patch("/api/events/:id", async (req: Request, res: Response) => {
     try {
-      const event = await storage.updateEvent(req.params.id, req.body);
-      if (!event) {
+      const event = await storage.getEvent(req.params.id);
+      if (!event || !(await ownsProperty(event.propertyId, req.user!.id))) {
         return res.status(404).json({ error: "Event not found" });
       }
-      res.json(event);
+      const data = updateEventSchema.parse(req.body);
+      if (data.propertyId && !(await ownsProperty(data.propertyId, req.user!.id))) {
+        return res.status(404).json({ error: "Property not found" });
+      }
+      res.json(await storage.updateEvent(req.params.id, data));
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      sendError(res, error);
     }
   });
 
   app.delete("/api/events/:id", async (req: Request, res: Response) => {
     try {
+      const event = await storage.getEvent(req.params.id);
+      if (!event || !(await ownsProperty(event.propertyId, req.user!.id))) {
+        return res.status(404).json({ error: "Event not found" });
+      }
       await storage.deleteEvent(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      sendError(res, error);
     }
   });
 
-  // Widget API - Public endpoint for embedded widget
-  app.get("/api/widget/properties/:propertyId", async (req: Request, res: Response) => {
-    try {
-      const { propertyId } = req.params;
-      
-      // Fetch property data
-      const property = await storage.getProperty(propertyId);
-      if (!property) {
-        return res.status(404).json({ error: "Property not found" });
-      }
-
-      // Fetch rooms for this property
-      const allRooms = await storage.getRooms(propertyId);
-      const rooms = allRooms.filter(room => room.isAvailable);
-
-      // Fetch events for this property (sorted chronologically)
-      const events = await storage.getEvents(propertyId);
-      const sortedEvents = [...events].sort((a, b) => {
-        const dateA = new Date(a.eventDate).getTime();
-        const dateB = new Date(b.eventDate).getTime();
-        return dateA - dateB;
-      });
-
-      // Return combined data for widget
-      res.json({
-        property,
-        rooms,
-        events: sortedEvents,
-      });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  const httpServer = createServer(app);
-  return httpServer;
+  return createServer(app);
 }
