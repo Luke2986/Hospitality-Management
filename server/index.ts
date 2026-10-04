@@ -7,27 +7,15 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// CORS configuration for widget embedding (only for public widget routes)
+// Only the booking widget may be framed by other sites; everything else (dashboard, login) is same-origin only.
+// No CORS headers: the widget iframe calls the API from the app's own origin.
 app.use((req, res, next) => {
-  const isWidgetRoute = req.path.startsWith('/widget') || req.path.startsWith('/api/widget');
-  const isPublicAsset = req.path.endsWith('.js') || req.path.endsWith('.html');
-  
-  if (isWidgetRoute || isPublicAsset) {
-    // Allow cross-origin requests for widget and public assets
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    
-    // Allow iframe embedding for widget pages only
-    res.removeHeader('X-Frame-Options');
-    res.setHeader('Content-Security-Policy', "frame-ancestors *");
-    
-    // Handle preflight requests
-    if (req.method === 'OPTIONS') {
-      return res.sendStatus(200);
-    }
+  if (req.path.startsWith("/widget/")) {
+    res.setHeader("Content-Security-Policy", "frame-ancestors *");
+  } else {
+    res.setHeader("Content-Security-Policy", "frame-ancestors 'self'");
+    res.setHeader("X-Frame-Options", "SAMEORIGIN");
   }
-  
   next();
 });
 
