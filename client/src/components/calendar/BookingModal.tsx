@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Room } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, X, Loader2, ArrowLeft, Calendar, User, Mail, AlertTriangle, Users, Phone } from 'lucide-react';
@@ -119,6 +119,13 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
       cancelBookingMutation.mutate(bookingId);
     }
   };
+
+  // Inside an auto-sized iframe the modal is centred on the whole widget, so ask the host page to scroll it into view.
+  useEffect(() => {
+    if (isOpen && window.parent !== window) {
+      window.parent.postMessage({ type: 'booking-widget-modal-open' }, '*');
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

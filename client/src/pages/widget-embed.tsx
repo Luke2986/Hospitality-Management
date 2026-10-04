@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'wouter';
 import { Calendar } from '@/components/calendar/Calendar';
@@ -35,39 +35,23 @@ export default function WidgetEmbedPage() {
       ? availableRooms(widgetData.rooms, widgetData.bookedRanges, selectedDates.from, selectedDates.to)
       : null;
 
-  // Notify parent frame about height changes for auto-resize
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Measures the content, not the viewport: the iframe's own height must not feed back into it.
   useEffect(() => {
-    let timeoutId: number;
-    
-    const notifyParent = () => {
-      // Throttle resize notifications to prevent loops
-      clearTimeout(timeoutId);
-      timeoutId = window.setTimeout(() => {
-        const height = document.body.scrollHeight;
-        window.parent.postMessage({ type: 'resize', height }, '*');
-      }, 100);
-    };
+    const root = rootRef.current;
+    if (!root || window.parent === window) return;
 
-    // Notify on load and content changes
-    const observer = new MutationObserver(notifyParent);
-    observer.observe(document.body, { 
-      childList: true, 
-      subtree: true, 
-      attributes: true 
+    let lastHeight = 0;
+    const observer = new ResizeObserver(() => {
+      const height = Math.ceil(root.getBoundingClientRect().height);
+      if (height === lastHeight) return;
+      lastHeight = height;
+      window.parent.postMessage({ type: 'booking-widget-resize', height }, '*');
     });
-
-    // Also notify on window resize
-    window.addEventListener('resize', notifyParent);
-    
-    // Initial notification
-    notifyParent();
-
-    return () => {
-      clearTimeout(timeoutId);
-      observer.disconnect();
-      window.removeEventListener('resize', notifyParent);
-    };
-  }, []);
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, [propertyId]);
 
   if (!propertyId) {
     return (
@@ -80,7 +64,7 @@ export default function WidgetEmbedPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
+    <div ref={rootRef} className="bg-background p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header with Property Info */}
         {isLoading ? (
