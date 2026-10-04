@@ -58,6 +58,7 @@ Il server e `npm run db:push` leggono il file `.env` nella cartella del progetto
 | `APP_URL` | sì in produzione | URL pubblico dell'app, usato per i link nelle email (es. `https://gestionale.tuodominio.it`) |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | no | Chiavi di [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) (gratuito) per la verifica anti-bot sulle prenotazioni del widget. Vanno impostate entrambe o nessuna; senza chiavi resta attivo solo il campo trappola nascosto |
 | `PORT` | no | Porta del server (default `5000`) |
+| `TEST_DATABASE_URL` | solo per `npm test` | Database PostgreSQL usa e getta per i test. I test ne cancellano tutti i dati: non usare mai un database con dati veri |
 
 ### Script
 
@@ -67,6 +68,7 @@ Il server e `npm run db:push` leggono il file `.env` nella cartella del progetto
 | `npm run build` | Build del client e bundle del server in `dist/` |
 | `npm run start` | Avvia la build di produzione |
 | `npm run check` | Controllo dei tipi TypeScript |
+| `npm test` | Test di integrazione su un database reale (richiede `TEST_DATABASE_URL`) |
 | `npm run db:push` | Applica lo schema al database con Drizzle Kit |
 | `npm run db:claim-legacy -- <email>` | Assegna all'account indicato le strutture create prima dell'autenticazione |
 
@@ -100,8 +102,9 @@ Le prenotazioni dal widget nascono sempre `pending` e il prezzo totale è calcol
 
 ```
 client/      Frontend React (pagine, componenti, widget.js)
-server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, env.ts, turnstile.ts, log-error.ts, claim-legacy.ts, index.ts
+server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, env.ts, turnstile.ts, log-error.ts, claim-legacy.ts, app.ts, index.ts
 shared/      Schema Drizzle e schemi Zod condivisi
+tests/       Test di integrazione (node:test) sulle API
 migrations/  Migrazioni generate da Drizzle Kit
 ```
 
@@ -111,10 +114,10 @@ Elenco da risolvere. Ordinato per gravità.
 
 **Qualità e manutenzione**
 
-1. **Nessun test automatico** (unit, integrazione, e2e) e nessuna CI.
-2. **Funzionalità solo accennate nello schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` negli eventi non sono usate.
-3. **Nessuna paginazione** su liste di camere, prenotazioni ed eventi.
-4. **Nessuna notifica email per le prenotazioni**, né all'ospite né al proprietario.
+1. **Funzionalità solo accennate nello schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` negli eventi non sono usate.
+2. **Nessuna paginazione** su liste di camere, prenotazioni ed eventi.
+3. **Nessuna notifica email per le prenotazioni**, né all'ospite né al proprietario.
+4. **Nessun test sul frontend:** i test coprono le API, non l'interfaccia.
 5. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
 
 ### Aggiornare da una versione senza account
@@ -145,7 +148,7 @@ Avvia i comandi dalla cartella del progetto, così viene letto il file `.env`; i
 Il progetto è aperto: chiunque può fare fork, migliorarlo e proporre modifiche.
 
 1. Fai fork del repository e crea un branch per la tua modifica.
-2. Verifica che `npm run check` non introduca nuovi errori.
+2. Verifica che `npm run check` e `npm test` passino: la CI di GitHub li esegue su ogni pull request.
 3. Apri una pull request spiegando cosa cambia e perché.
 
 La lista dei [problemi noti](#problemi-noti) è un buon punto di partenza.
@@ -220,6 +223,7 @@ The server and `npm run db:push` read the `.env` file in the project folder (see
 | `APP_URL` | yes in production | Public URL of the app, used for links in emails (e.g. `https://app.yourdomain.com`) |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | no | [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) keys (free) for bot protection on widget bookings. Set both or neither; without them only the hidden honeypot field is active |
 | `PORT` | no | Server port (default `5000`) |
+| `TEST_DATABASE_URL` | only for `npm test` | Disposable PostgreSQL database for the tests. The tests wipe all its data: never point it at real data |
 
 ### Scripts
 
@@ -229,6 +233,7 @@ The server and `npm run db:push` read the `.env` file in the project folder (see
 | `npm run build` | Build the client and bundle the server into `dist/` |
 | `npm run start` | Run the production build |
 | `npm run check` | TypeScript type check |
+| `npm test` | Integration tests against a real database (needs `TEST_DATABASE_URL`) |
 | `npm run db:push` | Push the schema to the database with Drizzle Kit |
 | `npm run db:claim-legacy -- <email>` | Assign properties created before authentication to the given account |
 
@@ -262,8 +267,9 @@ Widget bookings are always created as `pending`, and the total price is computed
 
 ```
 client/      React frontend (pages, components, widget.js)
-server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, env.ts, turnstile.ts, log-error.ts, claim-legacy.ts, index.ts
+server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, env.ts, turnstile.ts, log-error.ts, claim-legacy.ts, app.ts, index.ts
 shared/      Drizzle schema and shared Zod schemas
+tests/       API integration tests (node:test)
 migrations/  Migrations generated by Drizzle Kit
 ```
 
@@ -273,10 +279,10 @@ To be fixed. Ordered by severity.
 
 **Quality and maintenance**
 
-1. **No automated tests** (unit, integration, e2e) and no CI.
-2. **Half-built features in the schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` on events are unused.
-3. **No pagination** on room, booking and event lists.
-4. **No booking email notifications** to the guest or owner.
+1. **Half-built features in the schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` on events are unused.
+2. **No pagination** on room, booking and event lists.
+3. **No booking email notifications** to the guest or owner.
+4. **No frontend tests:** the tests cover the API, not the UI.
 5. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
 
 ### Upgrading from a version without accounts
@@ -307,7 +313,7 @@ Run the commands from the project folder so the `.env` file is picked up, or set
 The project is open: anyone can fork it, improve it and propose changes.
 
 1. Fork the repository and create a branch for your change.
-2. Make sure `npm run check` doesn't introduce new errors.
+2. Make sure `npm run check` and `npm test` pass: GitHub CI runs them on every pull request.
 3. Open a pull request explaining what changes and why.
 
 The [known issues](#known-issues) list is a good place to start.
