@@ -28,7 +28,7 @@ Gestionale web per piccole strutture ricettive (B&B, agriturismi, case vacanza).
 
 ### Requisiti
 
-- Node.js 20+
+- Node.js 20.12+
 - Un database PostgreSQL raggiungibile
 
 ### Avvio in locale
@@ -37,8 +37,7 @@ Gestionale web per piccole strutture ricettive (B&B, agriturismi, case vacanza).
 git clone https://github.com/Luke2986/Hospitality-Management.git
 cd Hospitality-Management
 npm install
-export DATABASE_URL="postgres://utente:password@host:5432/nomedb"
-export SESSION_SECRET="$(openssl rand -hex 32)"
+cp .env.example .env   # poi imposta DATABASE_URL e SESSION_SECRET (openssl rand -hex 32)
 npm run db:push
 npm run dev
 ```
@@ -46,6 +45,8 @@ npm run dev
 L'app (API e client) risponde su `http://localhost:5000`. Crea un account da `/signup`: senza `RESEND_API_KEY` il link di conferma compare nel log del server.
 
 ### Variabili d'ambiente
+
+Il server e `npm run db:push` leggono il file `.env` nella cartella del progetto (vedi `.env.example`). Le variabili già impostate nell'ambiente hanno la precedenza. Il file `.env` è escluso da git.
 
 | Variabile | Obbligatoria | Descrizione |
 |---|---|---|
@@ -94,7 +95,7 @@ Le prenotazioni dal widget nascono sempre `pending` e il prezzo totale è calcol
 
 ```
 client/      Frontend React (pagine, componenti, widget.js)
-server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, index.ts
+server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, env.ts, index.ts
 shared/      Schema Drizzle e schemi Zod condivisi
 migrations/  Migrazioni generate da Drizzle Kit
 ```
@@ -119,11 +120,10 @@ Elenco da risolvere. Ordinato per gravità.
 **Qualità e manutenzione**
 
 8. **Nessun test automatico** (unit, integrazione, e2e) e nessuna CI.
-9. **Nessun `.env.example`.**
-10. **Funzionalità solo accennate nello schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` negli eventi non sono usate.
-11. **Nessuna paginazione** su liste di camere, prenotazioni ed eventi.
-12. **Nessuna notifica email per le prenotazioni**, né all'ospite né al proprietario.
-13. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
+9. **Funzionalità solo accennate nello schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` negli eventi non sono usate.
+10. **Nessuna paginazione** su liste di camere, prenotazioni ed eventi.
+11. **Nessuna notifica email per le prenotazioni**, né all'ospite né al proprietario.
+12. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
 
 #### Riassegnare i dati legacy
 
@@ -135,7 +135,7 @@ WHERE owner_id = '00000000-0000-0000-0000-000000000000';
 
 ### Produzione
 
-Il progetto non dipende da nessuna piattaforma: serve un server con Node.js 20+ e un database PostgreSQL.
+Il progetto non dipende da nessuna piattaforma: serve un server con Node.js 20.12+ e un database PostgreSQL.
 
 ```bash
 npm ci
@@ -144,7 +144,7 @@ npm run build
 NODE_ENV=production npm start
 ```
 
-In produzione sono obbligatorie `DATABASE_URL`, `SESSION_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM` e `APP_URL`. Metti l'app dietro un reverse proxy con HTTPS (es. Caddy o Nginx): il cookie di sessione è `Secure` e il server si fida di un solo proxy davanti a sé.
+Avvia i comandi dalla cartella del progetto, così viene letto il file `.env`; in alternativa imposta le variabili nell'ambiente. In produzione sono obbligatorie `DATABASE_URL`, `SESSION_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM` e `APP_URL`. Metti l'app dietro un reverse proxy con HTTPS (es. Caddy o Nginx): il cookie di sessione è `Secure` e il server si fida di un solo proxy davanti a sé.
 
 ### Contribuire
 
@@ -196,7 +196,7 @@ Web-based management system for small hospitality businesses (B&Bs, farm stays, 
 
 ### Requirements
 
-- Node.js 20+
+- Node.js 20.12+
 - A reachable PostgreSQL database
 
 ### Getting started
@@ -205,8 +205,7 @@ Web-based management system for small hospitality businesses (B&Bs, farm stays, 
 git clone https://github.com/Luke2986/Hospitality-Management.git
 cd Hospitality-Management
 npm install
-export DATABASE_URL="postgres://user:password@host:5432/dbname"
-export SESSION_SECRET="$(openssl rand -hex 32)"
+cp .env.example .env   # then set DATABASE_URL and SESSION_SECRET (openssl rand -hex 32)
 npm run db:push
 npm run dev
 ```
@@ -214,6 +213,8 @@ npm run dev
 The app (API and client) is served at `http://localhost:5000`. Create an account at `/signup`: without `RESEND_API_KEY` the confirmation link is printed to the server log.
 
 ### Environment variables
+
+The server and `npm run db:push` read the `.env` file in the project folder (see `.env.example`). Variables already set in the environment take precedence. `.env` is ignored by git.
 
 | Variable | Required | Description |
 |---|---|---|
@@ -262,7 +263,7 @@ Widget bookings are always created as `pending`, and the total price is computed
 
 ```
 client/      React frontend (pages, components, widget.js)
-server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, index.ts
+server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, env.ts, index.ts
 shared/      Drizzle schema and shared Zod schemas
 migrations/  Migrations generated by Drizzle Kit
 ```
@@ -287,11 +288,10 @@ To be fixed. Ordered by severity.
 **Quality and maintenance**
 
 8. **No automated tests** (unit, integration, e2e) and no CI.
-9. **No `.env.example`.**
-10. **Half-built features in the schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` on events are unused.
-11. **No pagination** on room, booking and event lists.
-12. **No booking email notifications** to the guest or owner.
-13. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
+9. **Half-built features in the schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` on events are unused.
+10. **No pagination** on room, booking and event lists.
+11. **No booking email notifications** to the guest or owner.
+12. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
 
 #### Reassigning legacy data
 
@@ -303,7 +303,7 @@ WHERE owner_id = '00000000-0000-0000-0000-000000000000';
 
 ### Production
 
-The project is platform-independent: all it needs is a server with Node.js 20+ and a PostgreSQL database.
+The project is platform-independent: all it needs is a server with Node.js 20.12+ and a PostgreSQL database.
 
 ```bash
 npm ci
@@ -312,7 +312,7 @@ npm run build
 NODE_ENV=production npm start
 ```
 
-In production `DATABASE_URL`, `SESSION_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM` and `APP_URL` are required. Put the app behind a reverse proxy with HTTPS (e.g. Caddy or Nginx): the session cookie is `Secure` and the server trusts exactly one proxy in front of it.
+Run the commands from the project folder so the `.env` file is picked up, or set the variables in the environment. In production `DATABASE_URL`, `SESSION_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM` and `APP_URL` are required. Put the app behind a reverse proxy with HTTPS (e.g. Caddy or Nginx): the session cookie is `Secure` and the server trusts exactly one proxy in front of it.
 
 ### Contributing
 
