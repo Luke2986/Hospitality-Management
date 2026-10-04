@@ -6,11 +6,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { ApiError, apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link, Redirect, useLocation } from "wouter";
 import { useAuth, AUTH_QUERY_KEY } from "@/hooks/use-auth";
 import { LogIn } from "lucide-react";
+import { useState } from "react";
 
 const loginSchema = z.object({
   email: z.string().email("Indirizzo email non valido"),
@@ -23,6 +24,7 @@ export default function Login() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -45,7 +47,11 @@ export default function Login() {
       });
       setLocation("/dashboard");
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables) => {
+      if (error instanceof ApiError && error.code === "EMAIL_NOT_VERIFIED") {
+        setUnverifiedEmail(variables.email);
+        return;
+      }
       toast({
         title: "Errore",
         description: error.message,
@@ -54,7 +60,21 @@ export default function Login() {
     },
   });
 
+  const resendMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const res = await apiRequest("POST", "/api/auth/resend-verification", { email });
+      return res.json();
+    },
+    onSuccess: (data: { message: string }) => {
+      toast({ title: "Email inviata", description: data.message });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    },
+  });
+
   const onSubmit = (data: LoginForm) => {
+    setUnverifiedEmail(null);
     loginMutation.mutate(data);
   };
 
@@ -100,7 +120,12 @@ export default function Login() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Password</FormLabel>
+                      <Link href="/forgot-password" className="text-sm text-primary hover:underline" data-testid="link-forgot-password">
+                        Password dimenticata?
+                      </Link>
+                    </div>
                     <FormControl>
                       <Input
                         {...field}
@@ -113,6 +138,21 @@ export default function Login() {
                   </FormItem>
                 )}
               />
+              {unverifiedEmail && (
+                <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 space-y-2" data-testid="alert-email-not-verified">
+                  <p>Devi confermare il tuo indirizzo email prima di accedere. Controlla la posta, anche nello spam.</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={resendMutation.isPending}
+                    onClick={() => resendMutation.mutate(unverifiedEmail)}
+                    data-testid="button-resend-verification"
+                  >
+                    {resendMutation.isPending ? "Invio in corso..." : "Invia di nuovo l'email"}
+                  </Button>
+                </div>
+              )}
               <Button
                 type="submit"
                 className="w-full"

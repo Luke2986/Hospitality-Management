@@ -1,13 +1,16 @@
-import { eq, desc, and, sql, inArray, type SQL } from "drizzle-orm";
+import { eq, desc, and, sql, inArray, isNull, gt, type SQL } from "drizzle-orm";
 import { db } from "./db";
 import { 
   users, 
+  authTokens,
   properties, 
   rooms, 
   bookings, 
   events,
   type User,
   type InsertUser,
+  type AuthToken,
+  type AuthTokenType,
   type Property,
   type InsertProperty,
   type Room,
@@ -23,6 +26,13 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  markEmailVerified(userId: string): Promise<void>;
+  updateUserPassword(userId: string, passwordHash: string): Promise<void>;
+
+  // Auth tokens
+  createAuthToken(token: { userId: string; type: AuthTokenType; tokenHash: string; expiresAt: Date }): Promise<void>;
+  consumeAuthToken(tokenHash: string, type: AuthTokenType): Promise<AuthToken | undefined>;
+  invalidateAuthTokens(userId: string, type: AuthTokenType): Promise<void>;
 
   // Properties
   getProperties(ownerId: string): Promise<Property[]>;
@@ -80,6 +90,41 @@ export class DatabaseStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
+  }
+
+  async markEmailVerified(userId: string): Promise<void> {
+    await db.update(users)
+      .set({ emailVerifiedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(users.id, userId), isNull(users.emailVerifiedAt)));
+  }
+
+  async updateUserPassword(userId: string, passwordHash: string): Promise<void> {
+    await db.update(users).set({ password: passwordHash, updatedAt: new Date() }).where(eq(users.id, userId));
+  }
+
+  // Auth tokens
+  async createAuthToken(token: { userId: string; type: AuthTokenType; tokenHash: string; expiresAt: Date }): Promise<void> {
+    await db.insert(authTokens).values(token);
+  }
+
+  // Single UPDATE ... RETURNING so a token can't be redeemed twice by concurrent requests
+  async consumeAuthToken(tokenHash: string, type: AuthTokenType): Promise<AuthToken | undefined> {
+    const [token] = await db.update(authTokens)
+      .set({ usedAt: new Date() })
+      .where(and(
+        eq(authTokens.tokenHash, tokenHash),
+        eq(authTokens.type, type),
+        isNull(authTokens.usedAt),
+        gt(authTokens.expiresAt, new Date()),
+      ))
+      .returning();
+    return token;
+  }
+
+  async invalidateAuthTokens(userId: string, type: AuthTokenType): Promise<void> {
+    await db.update(authTokens)
+      .set({ usedAt: new Date() })
+      .where(and(eq(authTokens.userId, userId), eq(authTokens.type, type), isNull(authTokens.usedAt)));
   }
 
   // Properties

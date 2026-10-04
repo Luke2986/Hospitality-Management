@@ -9,8 +9,20 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password: text("password"), // Nullable - system users don't need password
   fullName: text("full_name"),
+  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Single-use tokens for email verification and password reset; only the SHA-256 hash is stored
+export const authTokens = pgTable("auth_tokens", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  type: varchar("type", { length: 30 }).notNull(),
+  tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Properties table
@@ -83,6 +95,7 @@ export const events = pgTable("events", {
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
+  emailVerifiedAt: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -122,6 +135,9 @@ export const insertEventSchema = createInsertSchema(events).omit({
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export type AuthTokenType = "verify_email" | "reset_password";
+export type AuthToken = typeof authTokens.$inferSelect;
 
 export type InsertProperty = z.infer<typeof insertPropertySchema>;
 export type Property = typeof properties.$inferSelect;

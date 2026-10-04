@@ -12,7 +12,7 @@ Gestionale web per piccole strutture ricettive (B&B, agriturismi, case vacanza).
 
 ### Funzionalità
 
-- **Account** (`/signup`, `/login`): ogni proprietario vede e modifica solo le proprie strutture e i dati collegati.
+- **Account** (`/signup`, `/login`): registrazione con conferma via email, recupero password (`/forgot-password`). Ogni proprietario vede e modifica solo le proprie strutture e i dati collegati.
 - **Dashboard** (`/dashboard`, richiede login): gestione di strutture, camere, prenotazioni ed eventi locali, calendario e impostazioni.
 - **Calendario di prenotazione** (`/dashboard/calendario`): doppio mese con selezione del periodo, eventi locali filtrabili per categoria, camere disponibili con prezzo calcolato (notti × tariffa) e modal di prenotazione.
 - **Widget incorporabile** (`/widget/:propertyId`): la stessa esperienza del calendario, caricata in un iframe che si ridimensiona da solo tramite `client/public/widget.js`. Le impostazioni generano il codice di incorporamento.
@@ -43,7 +43,7 @@ npm run db:push
 npm run dev
 ```
 
-L'app (API e client) risponde su `http://localhost:5000`. Crea un account da `/signup`.
+L'app (API e client) risponde su `http://localhost:5000`. Crea un account da `/signup`: senza `RESEND_API_KEY` il link di conferma compare nel log del server.
 
 ### Variabili d'ambiente
 
@@ -51,6 +51,9 @@ L'app (API e client) risponde su `http://localhost:5000`. Crea un account da `/s
 |---|---|---|
 | `DATABASE_URL` | sì | Stringa di connessione PostgreSQL |
 | `SESSION_SECRET` | sì in produzione | Chiave per firmare il cookie di sessione. In sviluppo, se manca, ne viene generata una casuale a ogni avvio |
+| `RESEND_API_KEY` | sì in produzione | Chiave API di [Resend](https://resend.com) per inviare le email di conferma e recupero password. In sviluppo, se manca, il contenuto delle email viene stampato nel log del server |
+| `EMAIL_FROM` | sì in produzione | Mittente delle email, es. `Hospitality Manager <noreply@tuodominio.it>` (dominio verificato su Resend) |
+| `APP_URL` | sì in produzione | URL pubblico dell'app, usato per i link nelle email (es. `https://tuaapp.replit.app`) |
 | `PORT` | no | Porta del server (default `5000`) |
 
 ### Script
@@ -78,7 +81,7 @@ Tutte le rotte sono sotto `/api` e restituiscono JSON. Le rotte del widget e di 
 
 | Risorsa | Rotte |
 |---|---|
-| Autenticazione | `POST /api/auth/signup`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` |
+| Autenticazione | `POST /api/auth/signup`, `POST /api/auth/verify-email`, `POST /api/auth/resend-verification`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password` |
 | Strutture | `GET/POST /api/properties`, `PATCH/DELETE /api/properties/:id` |
 | Camere | `GET/POST /api/rooms`, `PATCH/DELETE /api/rooms/:id` |
 | Prenotazioni | `GET/POST /api/bookings`, `PATCH/DELETE /api/bookings/:id` |
@@ -91,7 +94,7 @@ Le prenotazioni dal widget nascono sempre `pending` e il prezzo totale è calcol
 
 ```
 client/      Frontend React (pagine, componenti, widget.js)
-server/      Express: auth.ts, routes.ts, storage.ts (Drizzle), db.ts, index.ts
+server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, index.ts
 shared/      Schema Drizzle e schemi Zod condivisi
 migrations/  Migrazioni generate da Drizzle Kit
 attached_assets/  File di riferimento e screenshot (non usati dall'app)
@@ -117,7 +120,7 @@ Elenco da risolvere. Ordinato per gravità.
 9. **Avvio impossibile su macOS.** `server.listen` usa `reusePort: true`, non supportato (`ENOTSUP`).
 10. **Gestione errori incoerente.** Il gestore errori globale rilancia l'errore dopo aver risposto (`throw err`).
 11. **Soft-delete assente e cancellazioni a cascata.** Eliminare una struttura cancella camere, prenotazioni ed eventi senza backup.
-12. **Dati legacy orfani.** Le strutture create prima dell'autenticazione appartengono all'utente di sistema `00000000-0000-0000-0000-000000000000`, che non può accedere: vanno riassegnate a mano (vedi sotto).
+12. **Dati legacy orfani.** Le strutture create prima dell'autenticazione appartengono all'utente di sistema `00000000-0000-0000-0000-000000000000`, che non può accedere: vanno riassegnate a mano (vedi sotto). Gli account creati prima della conferma email devono confermare l'indirizzo: al login compare il pulsante per ricevere il link.
 
 **Qualità e manutenzione**
 
@@ -126,7 +129,7 @@ Elenco da risolvere. Ordinato per gravità.
 15. **Nessun `.env.example`.**
 16. **Funzionalità solo accennate nello schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` negli eventi non sono usate.
 17. **Nessuna paginazione** su liste di camere, prenotazioni ed eventi.
-18. **Nessuna notifica email** all'ospite o al proprietario; nessun recupero password.
+18. **Nessuna notifica email per le prenotazioni**, né all'ospite né al proprietario.
 19. **Rumore nel repository:** `attached_assets/` (screenshot, file di un altro progetto come `CarCard.tsx`, un archivio `.tar.gz`) e configurazione Replit (`.replit`) mescolati al codice.
 20. **Nessuna licenza esplicita** (`package.json` dichiara MIT, manca il file `LICENSE`).
 21. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
@@ -149,7 +152,7 @@ Web-based management system for small hospitality businesses (B&Bs, farm stays, 
 
 ### Features
 
-- **Accounts** (`/signup`, `/login`): each owner can only see and edit their own properties and related data.
+- **Accounts** (`/signup`, `/login`): sign-up with email confirmation, password reset (`/forgot-password`). Each owner can only see and edit their own properties and related data.
 - **Dashboard** (`/dashboard`, login required): manage properties, rooms, bookings and local events, plus calendar and settings.
 - **Booking calendar** (`/dashboard/calendario`): dual-month date-range picker, local events filterable by category, available rooms with computed price (nights × rate), and a booking modal.
 - **Embeddable widget** (`/widget/:propertyId`): the same calendar experience loaded in an iframe that auto-resizes through `client/public/widget.js`. The settings page generates the embed code.
@@ -180,7 +183,7 @@ npm run db:push
 npm run dev
 ```
 
-The app (API and client) is served at `http://localhost:5000`. Create an account at `/signup`.
+The app (API and client) is served at `http://localhost:5000`. Create an account at `/signup`: without `RESEND_API_KEY` the confirmation link is printed to the server log.
 
 ### Environment variables
 
@@ -188,6 +191,9 @@ The app (API and client) is served at `http://localhost:5000`. Create an account
 |---|---|---|
 | `DATABASE_URL` | yes | PostgreSQL connection string |
 | `SESSION_SECRET` | yes in production | Key used to sign the session cookie. In development a random one is generated on each start if missing |
+| `RESEND_API_KEY` | yes in production | [Resend](https://resend.com) API key used to send confirmation and password reset emails. In development, if missing, email contents are printed to the server log |
+| `EMAIL_FROM` | yes in production | Email sender, e.g. `Hospitality Manager <noreply@yourdomain.com>` (domain verified on Resend) |
+| `APP_URL` | yes in production | Public URL of the app, used for links in emails (e.g. `https://yourapp.replit.app`) |
 | `PORT` | no | Server port (default `5000`) |
 
 ### Scripts
@@ -215,7 +221,7 @@ All routes live under `/api` and return JSON. Widget and auth routes are public;
 
 | Resource | Routes |
 |---|---|
-| Auth | `POST /api/auth/signup`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` |
+| Auth | `POST /api/auth/signup`, `POST /api/auth/verify-email`, `POST /api/auth/resend-verification`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password` |
 | Properties | `GET/POST /api/properties`, `PATCH/DELETE /api/properties/:id` |
 | Rooms | `GET/POST /api/rooms`, `PATCH/DELETE /api/rooms/:id` |
 | Bookings | `GET/POST /api/bookings`, `PATCH/DELETE /api/bookings/:id` |
@@ -228,7 +234,7 @@ Widget bookings are always created as `pending`, and the total price is computed
 
 ```
 client/      React frontend (pages, components, widget.js)
-server/      Express: auth.ts, routes.ts, storage.ts (Drizzle), db.ts, index.ts
+server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, index.ts
 shared/      Drizzle schema and shared Zod schemas
 migrations/  Migrations generated by Drizzle Kit
 attached_assets/  Reference files and screenshots (not used by the app)
@@ -254,7 +260,7 @@ To be fixed. Ordered by severity.
 9. **Cannot start on macOS.** `server.listen` uses `reusePort: true`, which is unsupported there (`ENOTSUP`).
 10. **Inconsistent error handling.** The global error handler rethrows after responding (`throw err`).
 11. **No soft delete, cascading hard deletes.** Deleting a property wipes its rooms, bookings and events with no backup.
-12. **Orphaned legacy data.** Properties created before authentication belong to the system user `00000000-0000-0000-0000-000000000000`, which cannot log in: reassign them manually (see below).
+12. **Orphaned legacy data.** Properties created before authentication belong to the system user `00000000-0000-0000-0000-000000000000`, which cannot log in: reassign them manually (see below). Accounts created before email confirmation must confirm their address: the login page offers a button to get the link.
 
 **Quality and maintenance**
 
@@ -263,7 +269,7 @@ To be fixed. Ordered by severity.
 15. **No `.env.example`.**
 16. **Half-built features in the schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` on events are unused.
 17. **No pagination** on room, booking and event lists.
-18. **No email notifications** to the guest or owner; no password reset.
+18. **No booking email notifications** to the guest or owner.
 19. **Repository noise:** `attached_assets/` (screenshots, files from another project such as `CarCard.tsx`, a `.tar.gz` archive) and Replit config (`.replit`) mixed in with the code.
 20. **No explicit license file** (`package.json` declares MIT, but there is no `LICENSE`).
 21. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.

@@ -6,11 +6,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Link, Redirect, useLocation } from "wouter";
-import { useAuth, AUTH_QUERY_KEY } from "@/hooks/use-auth";
-import { UserPlus } from "lucide-react";
+import { Link, Redirect } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
+import { MailCheck, UserPlus } from "lucide-react";
+import { useState } from "react";
 
 const signupSchema = z.object({
   email: z.string().email("Indirizzo email non valido"),
@@ -22,8 +23,8 @@ type SignupForm = z.infer<typeof signupSchema>;
 
 export default function Signup() {
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
   const { user } = useAuth();
+  const [sentTo, setSentTo] = useState<string | null>(null);
 
   const form = useForm<SignupForm>({
     resolver: zodResolver(signupSchema),
@@ -39,13 +40,8 @@ export default function Signup() {
       const res = await apiRequest("POST", "/api/auth/signup", data);
       return res.json();
     },
-    onSuccess: (user) => {
-      queryClient.setQueryData(AUTH_QUERY_KEY, user);
-      toast({
-        title: "Successo",
-        description: "Account creato con successo",
-      });
-      setLocation("/dashboard");
+    onSuccess: (_data, variables) => {
+      setSentTo(variables.email);
     },
     onError: (error: Error) => {
       toast({
@@ -62,6 +58,32 @@ export default function Signup() {
 
   if (user) {
     return <Redirect to="/dashboard" />;
+  }
+
+  if (sentTo) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-3xl font-bold flex items-center gap-2">
+              <MailCheck className="w-8 h-8 text-primary" />
+              Controlla la tua email
+            </CardTitle>
+            <CardDescription data-testid="text-signup-sent">
+              Abbiamo inviato a <span className="font-medium text-foreground">{sentTo}</span> un link per confermare
+              l'account. Il link scade tra 24 ore. Se non arriva, controlla lo spam o prova ad accedere: potrai
+              richiederne un altro.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm text-center">
+            Hai già confermato?{" "}
+            <Link href="/login" className="text-primary hover:underline">
+              Accedi
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (

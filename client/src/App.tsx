@@ -10,6 +10,9 @@ import { useAuth } from "@/hooks/use-auth";
 import Home from "@/pages/home";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
+import VerifyEmail from "@/pages/verify-email";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
 import DashboardHome from "@/pages/dashboard-home";
 import Properties from "@/pages/properties";
 import RoomsManagement from "@/pages/rooms-management";
@@ -53,6 +56,9 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
+      <Route path="/verify-email" component={VerifyEmail} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path="/widget/:propertyId">
         {(params) => <WidgetEmbed propertyId={params.propertyId} />}
       </Route>
