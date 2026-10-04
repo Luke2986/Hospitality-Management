@@ -53,7 +53,7 @@ L'app (API e client) risponde su `http://localhost:5000`. Crea un account da `/s
 | `SESSION_SECRET` | sì in produzione | Chiave per firmare il cookie di sessione. In sviluppo, se manca, ne viene generata una casuale a ogni avvio |
 | `RESEND_API_KEY` | sì in produzione | Chiave API di [Resend](https://resend.com) per inviare le email di conferma e recupero password. In sviluppo, se manca, il contenuto delle email viene stampato nel log del server |
 | `EMAIL_FROM` | sì in produzione | Mittente delle email, es. `Hospitality Manager <noreply@tuodominio.it>` (dominio verificato su Resend) |
-| `APP_URL` | sì in produzione | URL pubblico dell'app, usato per i link nelle email (es. `https://tuaapp.replit.app`) |
+| `APP_URL` | sì in produzione | URL pubblico dell'app, usato per i link nelle email (es. `https://gestionale.tuodominio.it`) |
 | `PORT` | no | Porta del server (default `5000`) |
 
 ### Script
@@ -97,7 +97,6 @@ client/      Frontend React (pagine, componenti, widget.js)
 server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, index.ts
 shared/      Schema Drizzle e schemi Zod condivisi
 migrations/  Migrazioni generate da Drizzle Kit
-attached_assets/  File di riferimento e screenshot (non usati dall'app)
 ```
 
 ### Problemi noti
@@ -117,22 +116,18 @@ Elenco da risolvere. Ordinato per gravità.
 6. **Prenotazioni sovrapposte.** Nessun controllo di disponibilità sulla stessa camera nelle stesse date, né vincolo a livello di database (race condition).
 7. **Date spostate di un giorno.** `BookingModal` converte le date con `toISOString()`, che usa UTC: in Italia check-in e check-out risultano anticipati di un giorno.
 8. **Auto-resize del widget non funzionante.** La pagina del widget invia messaggi `type: 'resize'`, ma `widget.js` ascolta `booking-widget-resize`.
-9. **Avvio impossibile su macOS.** `server.listen` usa `reusePort: true`, non supportato (`ENOTSUP`).
-10. **Gestione errori incoerente.** Il gestore errori globale rilancia l'errore dopo aver risposto (`throw err`).
-11. **Soft-delete assente e cancellazioni a cascata.** Eliminare una struttura cancella camere, prenotazioni ed eventi senza backup.
-12. **Dati legacy orfani.** Le strutture create prima dell'autenticazione appartengono all'utente di sistema `00000000-0000-0000-0000-000000000000`, che non può accedere: vanno riassegnate a mano (vedi sotto). Gli account creati prima della conferma email devono confermare l'indirizzo: al login compare il pulsante per ricevere il link.
+9. **Gestione errori incoerente.** Il gestore errori globale rilancia l'errore dopo aver risposto (`throw err`).
+10. **Soft-delete assente e cancellazioni a cascata.** Eliminare una struttura cancella camere, prenotazioni ed eventi senza backup.
+11. **Dati legacy orfani.** Le strutture create prima dell'autenticazione appartengono all'utente di sistema `00000000-0000-0000-0000-000000000000`, che non può accedere: vanno riassegnate a mano (vedi sotto). Gli account creati prima della conferma email devono confermare l'indirizzo: al login compare il pulsante per ricevere il link.
 
 **Qualità e manutenzione**
 
-13. **Documentazione obsoleta.** `replit.md` descrive ancora l'app come "senza autenticazione".
-14. **Nessun test automatico** (unit, integrazione, e2e) e nessuna CI.
-15. **Nessun `.env.example`.**
-16. **Funzionalità solo accennate nello schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` negli eventi non sono usate.
-17. **Nessuna paginazione** su liste di camere, prenotazioni ed eventi.
-18. **Nessuna notifica email per le prenotazioni**, né all'ospite né al proprietario.
-19. **Rumore nel repository:** `attached_assets/` (screenshot, file di un altro progetto come `CarCard.tsx`, un archivio `.tar.gz`) e configurazione Replit (`.replit`) mescolati al codice.
-20. **Nessuna licenza esplicita** (`package.json` dichiara MIT, manca il file `LICENSE`).
-21. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
+12. **Nessun test automatico** (unit, integrazione, e2e) e nessuna CI.
+13. **Nessun `.env.example`.**
+14. **Funzionalità solo accennate nello schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` negli eventi non sono usate.
+15. **Nessuna paginazione** su liste di camere, prenotazioni ed eventi.
+16. **Nessuna notifica email per le prenotazioni**, né all'ospite né al proprietario.
+17. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
 
 #### Riassegnare i dati legacy
 
@@ -141,6 +136,43 @@ UPDATE properties
 SET owner_id = (SELECT id FROM users WHERE email = 'tua@email.it')
 WHERE owner_id = '00000000-0000-0000-0000-000000000000';
 ```
+
+### Produzione
+
+Il progetto non dipende da nessuna piattaforma: serve un server con Node.js 20+ e un database PostgreSQL.
+
+```bash
+npm ci
+npm run db:push
+npm run build
+NODE_ENV=production npm start
+```
+
+In produzione sono obbligatorie `DATABASE_URL`, `SESSION_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM` e `APP_URL`. Metti l'app dietro un reverse proxy con HTTPS (es. Caddy o Nginx): il cookie di sessione è `Secure` e il server si fida di un solo proxy davanti a sé.
+
+### Contribuire
+
+Il progetto è aperto: chiunque può fare fork, migliorarlo e proporre modifiche.
+
+1. Fai fork del repository e crea un branch per la tua modifica.
+2. Verifica che `npm run check` non introduca nuovi errori.
+3. Apri una pull request spiegando cosa cambia e perché.
+
+La lista dei [problemi noti](#problemi-noti) è un buon punto di partenza.
+
+### Licenza
+
+Copyright (C) 2025-2026 Luca Versilia
+
+Rilasciato sotto **GNU Affero General Public License v3.0 o successiva** (AGPL-3.0-or-later). Testo completo in [`LICENSE`](LICENSE).
+
+In parole semplici:
+
+- puoi usare, studiare, modificare e ridistribuire il codice, anche per scopi commerciali;
+- se distribuisci una versione modificata, **oppure la rendi disponibile come servizio online**, devi pubblicare il codice sorgente delle tue modifiche con la stessa licenza AGPL e mantenere questo avviso di copyright;
+- il software è fornito senza alcuna garanzia.
+
+Le modifiche che restano solo sul tuo computer, senza essere distribuite né messe online, non devono essere pubblicate.
 
 ---
 
@@ -193,7 +225,7 @@ The app (API and client) is served at `http://localhost:5000`. Create an account
 | `SESSION_SECRET` | yes in production | Key used to sign the session cookie. In development a random one is generated on each start if missing |
 | `RESEND_API_KEY` | yes in production | [Resend](https://resend.com) API key used to send confirmation and password reset emails. In development, if missing, email contents are printed to the server log |
 | `EMAIL_FROM` | yes in production | Email sender, e.g. `Hospitality Manager <noreply@yourdomain.com>` (domain verified on Resend) |
-| `APP_URL` | yes in production | Public URL of the app, used for links in emails (e.g. `https://yourapp.replit.app`) |
+| `APP_URL` | yes in production | Public URL of the app, used for links in emails (e.g. `https://app.yourdomain.com`) |
 | `PORT` | no | Server port (default `5000`) |
 
 ### Scripts
@@ -237,7 +269,6 @@ client/      React frontend (pages, components, widget.js)
 server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, index.ts
 shared/      Drizzle schema and shared Zod schemas
 migrations/  Migrations generated by Drizzle Kit
-attached_assets/  Reference files and screenshots (not used by the app)
 ```
 
 ### Known issues
@@ -257,22 +288,18 @@ To be fixed. Ordered by severity.
 6. **Overlapping bookings.** No availability check for the same room on the same dates, and no database constraint (race condition).
 7. **Dates shifted by one day.** `BookingModal` converts dates with `toISOString()`, which uses UTC: in Italy check-in and check-out end up one day early.
 8. **Widget auto-resize is broken.** The widget page posts `type: 'resize'` messages, but `widget.js` listens for `booking-widget-resize`.
-9. **Cannot start on macOS.** `server.listen` uses `reusePort: true`, which is unsupported there (`ENOTSUP`).
-10. **Inconsistent error handling.** The global error handler rethrows after responding (`throw err`).
-11. **No soft delete, cascading hard deletes.** Deleting a property wipes its rooms, bookings and events with no backup.
-12. **Orphaned legacy data.** Properties created before authentication belong to the system user `00000000-0000-0000-0000-000000000000`, which cannot log in: reassign them manually (see below). Accounts created before email confirmation must confirm their address: the login page offers a button to get the link.
+9. **Inconsistent error handling.** The global error handler rethrows after responding (`throw err`).
+10. **No soft delete, cascading hard deletes.** Deleting a property wipes its rooms, bookings and events with no backup.
+11. **Orphaned legacy data.** Properties created before authentication belong to the system user `00000000-0000-0000-0000-000000000000`, which cannot log in: reassign them manually (see below). Accounts created before email confirmation must confirm their address: the login page offers a button to get the link.
 
 **Quality and maintenance**
 
-13. **Outdated docs.** `replit.md` still describes the app as having "no authentication".
-14. **No automated tests** (unit, integration, e2e) and no CI.
-15. **No `.env.example`.**
-16. **Half-built features in the schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` on events are unused.
-17. **No pagination** on room, booking and event lists.
-18. **No booking email notifications** to the guest or owner.
-19. **Repository noise:** `attached_assets/` (screenshots, files from another project such as `CarCard.tsx`, a `.tar.gz` archive) and Replit config (`.replit`) mixed in with the code.
-20. **No explicit license file** (`package.json` declares MIT, but there is no `LICENSE`).
-21. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
+12. **No automated tests** (unit, integration, e2e) and no CI.
+13. **No `.env.example`.**
+14. **Half-built features in the schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` on events are unused.
+15. **No pagination** on room, booking and event lists.
+16. **No booking email notifications** to the guest or owner.
+17. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
 
 #### Reassigning legacy data
 
@@ -281,3 +308,40 @@ UPDATE properties
 SET owner_id = (SELECT id FROM users WHERE email = 'you@example.com')
 WHERE owner_id = '00000000-0000-0000-0000-000000000000';
 ```
+
+### Production
+
+The project is platform-independent: all it needs is a server with Node.js 20+ and a PostgreSQL database.
+
+```bash
+npm ci
+npm run db:push
+npm run build
+NODE_ENV=production npm start
+```
+
+In production `DATABASE_URL`, `SESSION_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM` and `APP_URL` are required. Put the app behind a reverse proxy with HTTPS (e.g. Caddy or Nginx): the session cookie is `Secure` and the server trusts exactly one proxy in front of it.
+
+### Contributing
+
+The project is open: anyone can fork it, improve it and propose changes.
+
+1. Fork the repository and create a branch for your change.
+2. Make sure `npm run check` doesn't introduce new errors.
+3. Open a pull request explaining what changes and why.
+
+The [known issues](#known-issues) list is a good place to start.
+
+### License
+
+Copyright (C) 2025-2026 Luca Versilia
+
+Released under the **GNU Affero General Public License v3.0 or later** (AGPL-3.0-or-later). Full text in [`LICENSE`](LICENSE).
+
+In plain words:
+
+- you may use, study, modify and redistribute the code, including for commercial purposes;
+- if you distribute a modified version, **or make it available as an online service**, you must publish the source code of your changes under the same AGPL license and keep this copyright notice;
+- the software comes with no warranty.
+
+Changes that stay on your own machine, without being distributed or put online, don't have to be published.
