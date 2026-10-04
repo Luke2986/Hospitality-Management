@@ -9,7 +9,8 @@ import {
   isBefore, 
   startOfDay, 
   isWithinInterval,
-  subMonths
+  subMonths,
+  parseISO,
 } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -107,11 +108,11 @@ export function Calendar({ selectedDates, onDatesChange, disabledDates = [], eve
                             isWithinInterval(day, { start: selectedDates.from, end: selectedDates.to });
             
             const dayEvents = events.filter(event => {
-              const isSameDate = isSameDay(new Date(event.eventDate), day);
+              const isSameDate = isSameDay(parseISO(event.eventDate), day);
               
               let dateMatch = true;
               if (selectedDates.from && selectedDates.to) {
-                const eventDate = new Date(event.eventDate);
+                const eventDate = parseISO(event.eventDate);
                 dateMatch = isWithinInterval(eventDate, {
                   start: selectedDates.from,
                   end: selectedDates.to,

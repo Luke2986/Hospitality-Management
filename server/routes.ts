@@ -35,6 +35,7 @@ const guestBookingSchema = insertBookingSchema.pick({
 });
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const ROOM_UNAVAILABLE = "La camera non è disponibile per le date selezionate";
 
 function sendError(res: Response, error: any) {
   if (error?.name === "ZodError") {
@@ -99,8 +100,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         (a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime(),
       );
 
+      // Yesterday in UTC, so no time zone can miss a stay that is still in progress.
+      const fromDate = new Date(Date.now() - DAY_MS).toISOString().slice(0, 10);
+      const bookedRanges = await storage.getBookedRanges(propertyId, fromDate);
+
       const { ownerId: _ownerId, ...publicProperty } = property;
-      res.json({ property: publicProperty, rooms, events: sortedEvents });
+      res.json({ property: publicProperty, rooms, events: sortedEvents, bookedRanges });
     } catch (error: any) {
       sendError(res, error);
     }
@@ -118,12 +123,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Room not found" });
       }
       const totalPrice = priceBooking(room, data.checkIn, data.checkOut, data.guestsCount);
-      const booking = await storage.createBooking({
+      const booking = await storage.createBookingIfAvailable({
         ...data,
         propertyId: room.propertyId,
         totalPrice,
         status: "pending",
       });
+      if (!booking) return res.status(409).json({ error: ROOM_UNAVAILABLE });
       res.status(201).json({
         id: booking.id,
         status: booking.status,
@@ -274,7 +280,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Room not found" });
       }
       const totalPrice = priceBooking(room, data.checkIn, data.checkOut, data.guestsCount);
-      res.status(201).json(await storage.createBooking({ ...data, propertyId: room.propertyId, totalPrice }));
+      const booking = await storage.createBookingIfAvailable({ ...data, propertyId: room.propertyId, totalPrice });
+      if (!booking) return res.status(409).json({ error: ROOM_UNAVAILABLE });
+      res.status(201).json(booking);
     } catch (error: any) {
       sendError(res, error);
     }
@@ -287,7 +295,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Booking not found" });
       }
       const data = updateBookingSchema.parse(req.body);
-      res.json(await storage.updateBooking(req.params.id, data));
+      const updated = await storage.updateBookingIfAvailable(req.params.id, data);
+      if (!updated) return res.status(409).json({ error: ROOM_UNAVAILABLE });
+      res.json(updated);
     } catch (error: any) {
       sendError(res, error);
     }

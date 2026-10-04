@@ -1,5 +1,5 @@
 import { useState, useId } from 'react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Calendar, MapPin, Music, Utensils, Trophy, Church, ShoppingBag, Theater, ChevronDown, LucideIcon } from 'lucide-react';
 import { Event } from '@shared/schema';
@@ -69,10 +69,10 @@ export function EventCard({ event }: EventCardProps) {
           aria-hidden="true"
         >
           <span className="text-[10px] md:text-xs font-medium uppercase">
-            {format(new Date(event.eventDate), 'MMM', { locale: it })}
+            {format(parseISO(event.eventDate), 'MMM', { locale: it })}
           </span>
           <span className="text-lg md:text-xl font-bold">
-            {format(new Date(event.eventDate), 'dd')}
+            {format(parseISO(event.eventDate), 'dd')}
           </span>
         </div>
 

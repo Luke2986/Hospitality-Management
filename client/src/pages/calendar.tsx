@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Event, Room } from '@shared/schema';
+import { Booking, Event, Room } from '@shared/schema';
+import { availableRooms } from '@/lib/availability';
 import { Calendar } from '@/components/calendar/Calendar';
 import { EventsSidebar } from '@/components/calendar/EventsSidebar';
 import { RoomsGrid } from '@/components/calendar/RoomsGrid';
@@ -18,7 +19,21 @@ export default function CalendarPage() {
     queryKey: ['/api/rooms'],
   });
 
-  const isLoading = eventsLoading || roomsLoading;
+  const { data: bookings = [], isLoading: bookingsLoading } = useQuery<Booking[]>({
+    queryKey: ['/api/bookings'],
+  });
+
+  const isLoading = eventsLoading || roomsLoading || bookingsLoading;
+
+  const freeRooms =
+    selectedDates.from && selectedDates.to
+      ? availableRooms(
+          rooms.filter((room) => room.isAvailable),
+          bookings.filter((b) => b.status !== 'cancelled'),
+          selectedDates.from,
+          selectedDates.to,
+        )
+      : null;
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6 lg:p-8">
@@ -53,14 +68,14 @@ export default function CalendarPage() {
                 selectedCategory={selectedCategory}
               />
 
-              {selectedDates.from && selectedDates.to && rooms.length > 0 && (
+              {freeRooms && freeRooms.length > 0 && (
                 <RoomsGrid
-                  rooms={rooms}
+                  rooms={freeRooms}
                   selectedDates={selectedDates}
                 />
               )}
 
-              {selectedDates.from && selectedDates.to && rooms.length === 0 && (
+              {freeRooms && freeRooms.length === 0 && (
                 <div className="bg-card rounded-xl p-6 shadow-lg border border-border text-center">
                   <p className="text-muted-foreground">
                     Nessuna camera disponibile per le date selezionate

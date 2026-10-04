@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import type { Booking, Room } from "@shared/schema";
 import { Check, X, Mail, Search, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -219,8 +219,8 @@ export default function Bookings() {
                         <div className="text-sm text-muted-foreground">{booking.guestEmail}</div>
                       </div>
                     </TableCell>
-                    <TableCell>{format(new Date(booking.checkIn), "MMM d, yyyy")}</TableCell>
-                    <TableCell>{format(new Date(booking.checkOut), "MMM d, yyyy")}</TableCell>
+                    <TableCell>{format(parseISO(booking.checkIn), "MMM d, yyyy")}</TableCell>
+                    <TableCell>{format(parseISO(booking.checkOut), "MMM d, yyyy")}</TableCell>
                     <TableCell>{booking.guestsCount}</TableCell>
                     <TableCell className="font-medium">€{Number(booking.totalPrice).toFixed(2)}</TableCell>
                     <TableCell>{getStatusBadge(booking.status)}</TableCell>

@@ -1,4 +1,4 @@
-import { format, isWithinInterval } from 'date-fns';
+import { format, isWithinInterval, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Sparkles, Calendar } from 'lucide-react';
 import { EventCard } from './EventCard';
@@ -20,7 +20,7 @@ export function EventsSidebar({ events, selectedDates, selectedCategory, onCateg
     .filter(event => {
       let dateMatch = true;
       if (selectedDates.from && selectedDates.to) {
-        const eventDate = new Date(event.eventDate);
+        const eventDate = parseISO(event.eventDate);
         dateMatch = isWithinInterval(eventDate, {
           start: selectedDates.from,
           end: selectedDates.to,
@@ -35,8 +35,8 @@ export function EventsSidebar({ events, selectedDates, selectedCategory, onCateg
       return dateMatch && categoryMatch;
     })
     .sort((a, b) => {
-      const dateA = new Date(a.eventDate).getTime();
-      const dateB = new Date(b.eventDate).getTime();
+      const dateA = parseISO(a.eventDate).getTime();
+      const dateB = parseISO(b.eventDate).getTime();
       return dateA - dateB;
     });
 

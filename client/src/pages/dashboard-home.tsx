@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, CheckCircle, Clock, DollarSign } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import type { Booking, Event } from "@shared/schema";
 
 export default function DashboardHome() {
@@ -25,18 +25,18 @@ export default function DashboardHome() {
   const totalRevenue = thisMonth.reduce((sum, b) => sum + parseFloat(String(b.totalPrice)), 0);
 
   const upcomingEvents = events?.filter(e => {
-    const eventDate = new Date(e.eventDate);
+    const eventDate = parseISO(e.eventDate);
     const sevenDaysFromNow = new Date();
     sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
     return eventDate >= now && eventDate <= sevenDaysFromNow;
   }) || [];
 
   const upcomingCheckIns = confirmedBookings.filter(b => {
-    const checkIn = new Date(b.checkIn);
+    const checkIn = parseISO(b.checkIn);
     const threeDaysFromNow = new Date();
     threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
     return checkIn >= now && checkIn <= threeDaysFromNow;
-  }).sort((a, b) => new Date(a.checkIn).getTime() - new Date(b.checkIn).getTime());
+  }).sort((a, b) => parseISO(a.checkIn).getTime() - parseISO(b.checkIn).getTime());
 
   const stats = [
     {
@@ -121,7 +121,7 @@ export default function DashboardHome() {
                     <div>
                       <p className="text-sm font-medium">{booking.guestName}</p>
                       <p className="text-xs text-muted-foreground">
-                        {format(new Date(booking.checkIn), "MMM d, yyyy")}
+                        {format(parseISO(booking.checkIn), "MMM d, yyyy")}
                       </p>
                     </div>
                     <div className="text-sm text-muted-foreground">
@@ -149,7 +149,7 @@ export default function DashboardHome() {
                     <div>
                       <p className="text-sm font-medium">{event.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {format(new Date(event.eventDate), "MMM d, yyyy")}
+                        {format(parseISO(event.eventDate), "MMM d, yyyy")}
                       </p>
                     </div>
                     {event.category && (

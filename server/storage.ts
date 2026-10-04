@@ -1,4 +1,4 @@
-import { eq, desc, and, sql, inArray, isNull, gt, type SQL } from "drizzle-orm";
+import { eq, ne, desc, and, sql, inArray, isNull, gt, gte, lt, type SQL } from "drizzle-orm";
 import { db } from "./db";
 import { 
   users, 
@@ -20,6 +20,27 @@ import {
   type Event,
   type InsertEvent,
 } from "@shared/schema";
+
+export type BookedRange = { roomId: string; checkIn: string; checkOut: string };
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+// Locks the room row so concurrent bookings for the same room are checked one at a time.
+async function lockRoom(tx: Tx, roomId: string) {
+  await tx.select({ id: rooms.id }).from(rooms).where(eq(rooms.id, roomId)).for("update");
+}
+
+async function hasOverlap(tx: Tx, roomId: string, checkIn: string, checkOut: string, excludeId?: string) {
+  const conditions: SQL[] = [
+    eq(bookings.roomId, roomId),
+    ne(bookings.status, "cancelled"),
+    lt(bookings.checkIn, checkOut),
+    gt(bookings.checkOut, checkIn),
+  ];
+  if (excludeId) conditions.push(ne(bookings.id, excludeId));
+  const [clash] = await tx.select({ id: bookings.id }).from(bookings).where(and(...conditions)).limit(1);
+  return !!clash;
+}
 
 export interface IStorage {
   // Users
@@ -59,7 +80,9 @@ export interface IStorage {
     checkInTo?: string;
   }): Promise<Booking[]>;
   getBooking(id: string): Promise<Booking | undefined>;
-  createBooking(booking: InsertBooking): Promise<Booking>;
+  createBookingIfAvailable(booking: InsertBooking): Promise<Booking | null>;
+  updateBookingIfAvailable(id: string, data: Partial<InsertBooking>): Promise<Booking | null>;
+  getBookedRanges(propertyId: string, fromDate: string): Promise<BookedRange[]>;
   updateBooking(id: string, data: Partial<InsertBooking>): Promise<Booking | undefined>;
   deleteBooking(id: string): Promise<void>;
 
@@ -229,9 +252,40 @@ export class DatabaseStorage implements IStorage {
     return booking;
   }
 
-  async createBooking(booking: InsertBooking): Promise<Booking> {
-    const [newBooking] = await db.insert(bookings).values(booking).returning();
-    return newBooking;
+  async createBookingIfAvailable(booking: InsertBooking): Promise<Booking | null> {
+    return db.transaction(async (tx) => {
+      await lockRoom(tx, booking.roomId);
+      if (await hasOverlap(tx, booking.roomId, booking.checkIn, booking.checkOut)) return null;
+      const [newBooking] = await tx.insert(bookings).values(booking).returning();
+      return newBooking;
+    });
+  }
+
+  async updateBookingIfAvailable(id: string, data: Partial<InsertBooking>): Promise<Booking | null> {
+    return db.transaction(async (tx) => {
+      const [current] = await tx.select().from(bookings).where(eq(bookings.id, id));
+      if (!current) return null;
+      const next = { ...current, ...data };
+      if (next.status !== "cancelled") {
+        await lockRoom(tx, next.roomId);
+        if (await hasOverlap(tx, next.roomId, next.checkIn, next.checkOut, id)) return null;
+      }
+      const [updated] = await tx.update(bookings)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(bookings.id, id))
+        .returning();
+      return updated;
+    });
+  }
+
+  async getBookedRanges(propertyId: string, fromDate: string): Promise<BookedRange[]> {
+    return db.select({ roomId: bookings.roomId, checkIn: bookings.checkIn, checkOut: bookings.checkOut })
+      .from(bookings)
+      .where(and(
+        eq(bookings.propertyId, propertyId),
+        ne(bookings.status, "cancelled"),
+        gte(bookings.checkOut, fromDate),
+      ));
   }
 
   async updateBooking(id: string, data: Partial<InsertBooking>): Promise<Booking | undefined> {

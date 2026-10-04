@@ -5,6 +5,7 @@ import { CheckCircle, X, Loader2, ArrowLeft, Calendar, User, Mail, AlertTriangle
 import confetti from 'canvas-confetti';
 import { useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { toDateString } from '@/lib/availability';
 import { useToast } from '@/hooks/use-toast';
 
 interface BookingModalProps {
@@ -38,7 +39,6 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
     onSuccess: (data) => {
       setBookingId(data.id);
       setStep('success');
-      queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
       confetti({
         particleCount: 100,
         spread: 70,
@@ -47,6 +47,10 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
       });
     },
     onError: (error: any) => {
+      if (error?.status === 409) {
+        queryClient.invalidateQueries({ queryKey: ['/api/widget/properties'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
+      }
       toast({
         title: "Errore",
         description: error.message || "Errore durante la creazione della prenotazione",
@@ -74,6 +78,16 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
     }
   });
 
+  // Refresh availability only once the modal closes: refreshing earlier would hide this room
+  // (now booked) and unmount the modal before the guest sees the confirmation.
+  const handleClose = () => {
+    if (bookingId) {
+      queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/widget/properties'] });
+    }
+    onClose();
+  };
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setStep('review');
@@ -94,8 +108,8 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
       guestName: guestData.name,
       guestEmail: guestData.email,
       guestPhone: guestData.phone,
-      checkIn: selectedDates.from.toISOString().split('T')[0],
-      checkOut: selectedDates.to.toISOString().split('T')[0],
+      checkIn: toDateString(selectedDates.from),
+      checkOut: toDateString(selectedDates.to),
       guestsCount: guestData.guests,
     });
   };
@@ -134,7 +148,7 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
               </h3>
             </div>
             <button 
-              onClick={onClose} 
+              onClick={handleClose} 
               data-testid="button-close-modal"
               className="p-1 hover:bg-muted rounded-full transition-colors"
             >
@@ -323,7 +337,7 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
                         {!showCancelConfirm ? (
                           <>
                             <Button 
-                              onClick={onClose} 
+                              onClick={handleClose} 
                               data-testid="button-close-success"
                               className="w-full rounded-full py-5 md:py-6 text-base md:text-lg shadow-lg mb-4"
                             >
@@ -379,7 +393,7 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights }: B
                           La prenotazione è stata cancellata come richiesto.
                         </p>
                         <Button 
-                          onClick={onClose} 
+                          onClick={handleClose} 
                           data-testid="button-close-cancelled"
                           variant="secondary"
                           className="w-full rounded-full py-5 md:py-6 text-base md:text-lg"

@@ -13,7 +13,7 @@ import { insertEventSchema, type InsertEvent, type Event, type Property } from "
 import { Plus, Calendar, Trash2, Edit, MapPin } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 const eventCategories = [
   "sagra",
@@ -346,8 +346,8 @@ export default function Events() {
                 </CardTitle>
                 <CardDescription className="flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
-                  {format(new Date(event.eventDate), "MMM d, yyyy")}
-                  {event.endDate && ` - ${format(new Date(event.endDate), "MMM d, yyyy")}`}
+                  {format(parseISO(event.eventDate), "MMM d, yyyy")}
+                  {event.endDate && ` - ${format(parseISO(event.endDate), "MMM d, yyyy")}`}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

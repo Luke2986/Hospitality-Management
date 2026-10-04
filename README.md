@@ -113,21 +113,19 @@ Elenco da risolvere. Ordinato per gravità.
 
 **Correttezza**
 
-6. **Prenotazioni sovrapposte.** Nessun controllo di disponibilità sulla stessa camera nelle stesse date, né vincolo a livello di database (race condition).
-7. **Date spostate di un giorno.** `BookingModal` converte le date con `toISOString()`, che usa UTC: in Italia check-in e check-out risultano anticipati di un giorno.
-8. **Auto-resize del widget non funzionante.** La pagina del widget invia messaggi `type: 'resize'`, ma `widget.js` ascolta `booking-widget-resize`.
-9. **Gestione errori incoerente.** Il gestore errori globale rilancia l'errore dopo aver risposto (`throw err`).
-10. **Soft-delete assente e cancellazioni a cascata.** Eliminare una struttura cancella camere, prenotazioni ed eventi senza backup.
-11. **Dati legacy orfani.** Le strutture create prima dell'autenticazione appartengono all'utente di sistema `00000000-0000-0000-0000-000000000000`, che non può accedere: vanno riassegnate a mano (vedi sotto). Gli account creati prima della conferma email devono confermare l'indirizzo: al login compare il pulsante per ricevere il link.
+6. **Auto-resize del widget non funzionante.** La pagina del widget invia messaggi `type: 'resize'`, ma `widget.js` ascolta `booking-widget-resize`.
+7. **Gestione errori incoerente.** Il gestore errori globale rilancia l'errore dopo aver risposto (`throw err`).
+8. **Soft-delete assente e cancellazioni a cascata.** Eliminare una struttura cancella camere, prenotazioni ed eventi senza backup.
+9. **Dati legacy orfani.** Le strutture create prima dell'autenticazione appartengono all'utente di sistema `00000000-0000-0000-0000-000000000000`, che non può accedere: vanno riassegnate a mano (vedi sotto). Gli account creati prima della conferma email devono confermare l'indirizzo: al login compare il pulsante per ricevere il link.
 
 **Qualità e manutenzione**
 
-12. **Nessun test automatico** (unit, integrazione, e2e) e nessuna CI.
-13. **Nessun `.env.example`.**
-14. **Funzionalità solo accennate nello schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` negli eventi non sono usate.
-15. **Nessuna paginazione** su liste di camere, prenotazioni ed eventi.
-16. **Nessuna notifica email per le prenotazioni**, né all'ospite né al proprietario.
-17. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
+10. **Nessun test automatico** (unit, integrazione, e2e) e nessuna CI.
+11. **Nessun `.env.example`.**
+12. **Funzionalità solo accennate nello schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` negli eventi non sono usate.
+13. **Nessuna paginazione** su liste di camere, prenotazioni ed eventi.
+14. **Nessuna notifica email per le prenotazioni**, né all'ospite né al proprietario.
+15. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
 
 #### Riassegnare i dati legacy
 
@@ -285,21 +283,19 @@ To be fixed. Ordered by severity.
 
 **Correctness**
 
-6. **Overlapping bookings.** No availability check for the same room on the same dates, and no database constraint (race condition).
-7. **Dates shifted by one day.** `BookingModal` converts dates with `toISOString()`, which uses UTC: in Italy check-in and check-out end up one day early.
-8. **Widget auto-resize is broken.** The widget page posts `type: 'resize'` messages, but `widget.js` listens for `booking-widget-resize`.
-9. **Inconsistent error handling.** The global error handler rethrows after responding (`throw err`).
-10. **No soft delete, cascading hard deletes.** Deleting a property wipes its rooms, bookings and events with no backup.
-11. **Orphaned legacy data.** Properties created before authentication belong to the system user `00000000-0000-0000-0000-000000000000`, which cannot log in: reassign them manually (see below). Accounts created before email confirmation must confirm their address: the login page offers a button to get the link.
+6. **Widget auto-resize is broken.** The widget page posts `type: 'resize'` messages, but `widget.js` listens for `booking-widget-resize`.
+7. **Inconsistent error handling.** The global error handler rethrows after responding (`throw err`).
+8. **No soft delete, cascading hard deletes.** Deleting a property wipes its rooms, bookings and events with no backup.
+9. **Orphaned legacy data.** Properties created before authentication belong to the system user `00000000-0000-0000-0000-000000000000`, which cannot log in: reassign them manually (see below). Accounts created before email confirmation must confirm their address: the login page offers a button to get the link.
 
 **Quality and maintenance**
 
-12. **No automated tests** (unit, integration, e2e) and no CI.
-13. **No `.env.example`.**
-14. **Half-built features in the schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` on events are unused.
-15. **No pagination** on room, booking and event lists.
-16. **No booking email notifications** to the guest or owner.
-17. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
+10. **No automated tests** (unit, integration, e2e) and no CI.
+11. **No `.env.example`.**
+12. **Half-built features in the schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` on events are unused.
+13. **No pagination** on room, booking and event lists.
+14. **No booking email notifications** to the guest or owner.
+15. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
 
 #### Reassigning legacy data
 

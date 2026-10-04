@@ -6,11 +6,13 @@ import { EventsSidebar } from '@/components/calendar/EventsSidebar';
 import { RoomsGrid } from '@/components/calendar/RoomsGrid';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Property, Room, Event } from '@shared/schema';
+import { availableRooms, type BookedRange } from '@/lib/availability';
 
 interface WidgetData {
   property: Property;
   rooms: Room[];
   events: Event[];
+  bookedRanges: BookedRange[];
 }
 
 export default function WidgetEmbedPage() {
@@ -27,6 +29,11 @@ export default function WidgetEmbedPage() {
     },
     enabled: !!propertyId,
   });
+
+  const freeRooms =
+    widgetData && selectedDates.from && selectedDates.to
+      ? availableRooms(widgetData.rooms, widgetData.bookedRanges, selectedDates.from, selectedDates.to)
+      : null;
 
   // Notify parent frame about height changes for auto-resize
   useEffect(() => {
@@ -117,14 +124,14 @@ export default function WidgetEmbedPage() {
                 selectedCategory={selectedCategory}
               />
 
-              {selectedDates.from && selectedDates.to && widgetData.rooms.length > 0 && (
+              {freeRooms && freeRooms.length > 0 && (
                 <RoomsGrid
-                  rooms={widgetData.rooms}
+                  rooms={freeRooms}
                   selectedDates={selectedDates}
                 />
               )}
 
-              {selectedDates.from && selectedDates.to && widgetData.rooms.length === 0 && (
+              {freeRooms && freeRooms.length === 0 && (
                 <div className="bg-card rounded-xl p-6 shadow-lg border border-border text-center">
                   <p className="text-muted-foreground">
                     Nessuna camera disponibile per le date selezionate
