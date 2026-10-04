@@ -6,12 +6,8 @@ if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL must be set");
 }
 
-export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
+// TLS follows the sslmode in DATABASE_URL: require or verify-full check the certificate, no-verify skips the check.
+export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // Without a listener, an idle connection dropped by the server crashes the process.
 pool.on("error", (err) => {

@@ -50,7 +50,7 @@ Il server e `npm run db:push` leggono il file `.env` nella cartella del progetto
 
 | Variabile | Obbligatoria | Descrizione |
 |---|---|---|
-| `DATABASE_URL` | sì | Stringa di connessione PostgreSQL |
+| `DATABASE_URL` | sì | Stringa di connessione PostgreSQL. Il TLS segue `sslmode`: con `?sslmode=require` (es. Neon) il certificato viene verificato; con un'autorità propria usa `?sslmode=verify-full&sslrootcert=/percorso/ca.crt` (es. Supabase); senza `sslmode` niente TLS, adatto solo a un database locale |
 | `SESSION_SECRET` | sì in produzione | Chiave per firmare il cookie di sessione. In sviluppo, se manca, ne viene generata una casuale a ogni avvio |
 | `RESEND_API_KEY` | sì in produzione | Chiave API di [Resend](https://resend.com) per inviare le email di conferma e recupero password. In sviluppo, se manca, il contenuto delle email viene stampato nel log del server |
 | `EMAIL_FROM` | sì in produzione | Mittente delle email, es. `Hospitality Manager <noreply@tuodominio.it>` (dominio verificato su Resend) |
@@ -106,23 +106,22 @@ Elenco da risolvere. Ordinato per gravità.
 
 **Sicurezza**
 
-1. **TLS al database senza verifica** (`rejectUnauthorized: false` in `server/db.ts`).
-2. **Rate limiting solo in memoria**: vale per singolo processo e si azzera al riavvio; nessun CAPTCHA sulle prenotazioni pubbliche.
-3. **Log con dati personali.** I log delle richieste includono il corpo delle risposte JSON (email, nomi, telefoni degli ospiti).
-4. **Nessuna protezione CSRF esplicita**: ci si affida a `SameSite=Lax` sul cookie di sessione.
+1. **Rate limiting solo in memoria**: vale per singolo processo e si azzera al riavvio; nessun CAPTCHA sulle prenotazioni pubbliche.
+2. **Log con dati personali.** I log delle richieste includono il corpo delle risposte JSON (email, nomi, telefoni degli ospiti).
+3. **Nessuna protezione CSRF esplicita**: ci si affida a `SameSite=Lax` sul cookie di sessione.
 
 **Correttezza**
 
-5. **Soft-delete assente e cancellazioni a cascata.** Eliminare una struttura cancella camere, prenotazioni ed eventi senza backup.
-6. **Dati legacy orfani.** Le strutture create prima dell'autenticazione appartengono all'utente di sistema `00000000-0000-0000-0000-000000000000`, che non può accedere: vanno riassegnate a mano (vedi sotto). Gli account creati prima della conferma email devono confermare l'indirizzo: al login compare il pulsante per ricevere il link.
+4. **Soft-delete assente e cancellazioni a cascata.** Eliminare una struttura cancella camere, prenotazioni ed eventi senza backup.
+5. **Dati legacy orfani.** Le strutture create prima dell'autenticazione appartengono all'utente di sistema `00000000-0000-0000-0000-000000000000`, che non può accedere: vanno riassegnate a mano (vedi sotto). Gli account creati prima della conferma email devono confermare l'indirizzo: al login compare il pulsante per ricevere il link.
 
 **Qualità e manutenzione**
 
-7. **Nessun test automatico** (unit, integrazione, e2e) e nessuna CI.
-8. **Funzionalità solo accennate nello schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` negli eventi non sono usate.
-9. **Nessuna paginazione** su liste di camere, prenotazioni ed eventi.
-10. **Nessuna notifica email per le prenotazioni**, né all'ospite né al proprietario.
-11. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
+6. **Nessun test automatico** (unit, integrazione, e2e) e nessuna CI.
+7. **Funzionalità solo accennate nello schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` negli eventi non sono usate.
+8. **Nessuna paginazione** su liste di camere, prenotazioni ed eventi.
+9. **Nessuna notifica email per le prenotazioni**, né all'ospite né al proprietario.
+10. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
 
 #### Riassegnare i dati legacy
 
@@ -217,7 +216,7 @@ The server and `npm run db:push` read the `.env` file in the project folder (see
 
 | Variable | Required | Description |
 |---|---|---|
-| `DATABASE_URL` | yes | PostgreSQL connection string |
+| `DATABASE_URL` | yes | PostgreSQL connection string. TLS follows `sslmode`: with `?sslmode=require` (e.g. Neon) the certificate is verified; for a private CA use `?sslmode=verify-full&sslrootcert=/path/ca.crt` (e.g. Supabase); without `sslmode` there is no TLS, which is only fine for a local database |
 | `SESSION_SECRET` | yes in production | Key used to sign the session cookie. In development a random one is generated on each start if missing |
 | `RESEND_API_KEY` | yes in production | [Resend](https://resend.com) API key used to send confirmation and password reset emails. In development, if missing, email contents are printed to the server log |
 | `EMAIL_FROM` | yes in production | Email sender, e.g. `Hospitality Manager <noreply@yourdomain.com>` (domain verified on Resend) |
@@ -273,23 +272,22 @@ To be fixed. Ordered by severity.
 
 **Security**
 
-1. **Unverified TLS to the database** (`rejectUnauthorized: false` in `server/db.ts`).
-2. **In-memory rate limiting only**: per process and reset on restart; no CAPTCHA on public bookings.
-3. **Personal data in logs.** Request logs include JSON response bodies (guest emails, names, phone numbers).
-4. **No explicit CSRF protection**: relies on `SameSite=Lax` on the session cookie.
+1. **In-memory rate limiting only**: per process and reset on restart; no CAPTCHA on public bookings.
+2. **Personal data in logs.** Request logs include JSON response bodies (guest emails, names, phone numbers).
+3. **No explicit CSRF protection**: relies on `SameSite=Lax` on the session cookie.
 
 **Correctness**
 
-5. **No soft delete, cascading hard deletes.** Deleting a property wipes its rooms, bookings and events with no backup.
-6. **Orphaned legacy data.** Properties created before authentication belong to the system user `00000000-0000-0000-0000-000000000000`, which cannot log in: reassign them manually (see below). Accounts created before email confirmation must confirm their address: the login page offers a button to get the link.
+4. **No soft delete, cascading hard deletes.** Deleting a property wipes its rooms, bookings and events with no backup.
+5. **Orphaned legacy data.** Properties created before authentication belong to the system user `00000000-0000-0000-0000-000000000000`, which cannot log in: reassign them manually (see below). Accounts created before email confirmation must confirm their address: the login page offers a button to get the link.
 
 **Quality and maintenance**
 
-7. **No automated tests** (unit, integration, e2e) and no CI.
-8. **Half-built features in the schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` on events are unused.
-9. **No pagination** on room, booking and event lists.
-10. **No booking email notifications** to the guest or owner.
-11. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
+6. **No automated tests** (unit, integration, e2e) and no CI.
+7. **Half-built features in the schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` on events are unused.
+8. **No pagination** on room, booking and event lists.
+9. **No booking email notifications** to the guest or owner.
+10. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
 
 #### Reassigning legacy data
 
