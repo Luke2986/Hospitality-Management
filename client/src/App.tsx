@@ -59,9 +59,7 @@ function Router() {
       <Route path="/verify-email" component={VerifyEmail} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
-      <Route path="/widget/:propertyId">
-        {(params) => <WidgetEmbed propertyId={params.propertyId} />}
-      </Route>
+      <Route path="/widget/:propertyId" component={WidgetEmbed} />
       
       <Route path="/dashboard">
         <DashboardLayout>

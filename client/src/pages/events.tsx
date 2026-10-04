@@ -232,7 +232,7 @@ export default function Events() {
                     <FormItem>
                       <FormLabel>Descrizione</FormLabel>
                       <FormControl>
-                        <Textarea {...field} placeholder="Dettagli evento..." rows={3} data-testid="input-event-description" />
+                        <Textarea {...field} value={field.value ?? ""} placeholder="Dettagli evento..." rows={3} data-testid="input-event-description" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -259,7 +259,7 @@ export default function Events() {
                       <FormItem>
                         <FormLabel>Data Fine (Opzionale)</FormLabel>
                         <FormControl>
-                          <Input {...field} type="date" data-testid="input-event-end-date" />
+                          <Input {...field} value={field.value ?? ""} type="date" data-testid="input-event-end-date" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -273,7 +273,7 @@ export default function Events() {
                     <FormItem>
                       <FormLabel>Luogo</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Centro città" data-testid="input-event-location" />
+                        <Input {...field} value={field.value ?? ""} placeholder="Centro città" data-testid="input-event-location" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -285,7 +285,7 @@ export default function Events() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Categoria</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value ?? undefined}>
                         <FormControl>
                           <SelectTrigger data-testid="select-category">
                             <SelectValue placeholder="Seleziona categoria" />

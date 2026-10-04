@@ -210,8 +210,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/properties", async (req: Request, res: Response) => {
     try {
-      const data = insertPropertySchema.parse({ ...req.body, ownerId: req.user!.id });
-      res.status(201).json(await storage.createProperty(data));
+      const data = insertPropertySchema.parse(req.body);
+      res.status(201).json(await storage.createProperty({ ...data, ownerId: req.user!.id }));
     } catch (error: any) {
       sendError(res, error);
     }

@@ -178,7 +178,7 @@ export default function Properties() {
                     <FormItem>
                       <FormLabel>Descrizione</FormLabel>
                       <FormControl>
-                        <Textarea {...field} placeholder="Descrivi la tua proprietà..." rows={3} data-testid="input-property-description" />
+                        <Textarea {...field} value={field.value ?? ""} placeholder="Descrivi la tua proprietà..." rows={3} data-testid="input-property-description" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -219,7 +219,7 @@ export default function Properties() {
                     <FormItem>
                       <FormLabel>Indirizzo</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Via Roma 123" data-testid="input-property-address" />
+                        <Input {...field} value={field.value ?? ""} placeholder="Via Roma 123" data-testid="input-property-address" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

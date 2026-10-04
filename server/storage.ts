@@ -58,7 +58,7 @@ export interface IStorage {
   // Properties
   getProperties(ownerId: string, options?: { archived?: boolean }): Promise<Property[]>;
   getProperty(id: string): Promise<Property | undefined>;
-  createProperty(property: InsertProperty): Promise<Property>;
+  createProperty(property: InsertProperty & { ownerId: string }): Promise<Property>;
   updateProperty(id: string, data: Partial<InsertProperty>): Promise<Property | undefined>;
   setPropertyArchived(id: string, archived: boolean): Promise<Property | undefined>;
 
@@ -80,7 +80,7 @@ export interface IStorage {
     checkInTo?: string;
   }): Promise<Booking[]>;
   getBooking(id: string): Promise<Booking | undefined>;
-  createBookingIfAvailable(booking: InsertBooking): Promise<Booking | null>;
+  createBookingIfAvailable(booking: InsertBooking & { propertyId: string }): Promise<Booking | null>;
   updateBookingIfAvailable(id: string, data: Partial<InsertBooking>): Promise<Booking | null>;
   getBookedRanges(propertyId: string, fromDate: string): Promise<BookedRange[]>;
   countUpcomingBookings(filter: { propertyId?: string; roomId?: string }, today: string): Promise<number>;
@@ -172,7 +172,7 @@ export class DatabaseStorage implements IStorage {
     return property;
   }
 
-  async createProperty(property: InsertProperty): Promise<Property> {
+  async createProperty(property: InsertProperty & { ownerId: string }): Promise<Property> {
     const [newProperty] = await db.insert(properties).values(property).returning();
     return newProperty;
   }
@@ -278,7 +278,7 @@ export class DatabaseStorage implements IStorage {
     return booking;
   }
 
-  async createBookingIfAvailable(booking: InsertBooking): Promise<Booking | null> {
+  async createBookingIfAvailable(booking: InsertBooking & { propertyId: string }): Promise<Booking | null> {
     return db.transaction(async (tx) => {
       await lockRoom(tx, booking.roomId);
       if (await hasOverlap(tx, booking.roomId, booking.checkIn, booking.checkOut)) return null;

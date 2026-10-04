@@ -199,7 +199,7 @@ export default function RoomsManagement() {
                     <FormItem>
                       <FormLabel>Descrizione</FormLabel>
                       <FormControl>
-                        <Textarea {...field} placeholder="Dettagli camera..." rows={3} data-testid="input-room-description" />
+                        <Textarea {...field} value={field.value ?? ""} placeholder="Dettagli camera..." rows={3} data-testid="input-room-description" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
