@@ -74,6 +74,27 @@ async function ownsProperty(propertyId: string, userId: string) {
   return property?.ownerId === userId;
 }
 
+async function isBookableRoom(room: Room) {
+  const property = await storage.getProperty(room.propertyId);
+  return !room.archivedAt && !!property && !property.archivedAt;
+}
+
+// Archiving hides a property or room but keeps its bookings; upcoming ones need an explicit ?confirm=true.
+async function upcomingBookingsConflict(req: Request, res: Response, filter: { propertyId?: string; roomId?: string }) {
+  if (req.query.confirm === "true") return false;
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = await storage.countUpcomingBookings(filter, today);
+  if (upcoming === 0) return false;
+  res.status(409).json({
+    error: upcoming === 1 ? "C'è 1 prenotazione futura attiva" : `Ci sono ${upcoming} prenotazioni future attive`,
+    code: "HAS_UPCOMING_BOOKINGS",
+    upcomingBookings: upcoming,
+  });
+  return true;
+}
+
+const wantsArchived = (req: Request) => req.query.archived === "true";
+
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
@@ -93,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { propertyId } = req.params;
       const property = await storage.getProperty(propertyId);
-      if (!property || !property.active) {
+      if (!property || !property.active || property.archivedAt) {
         return res.status(404).json({ error: "Property not found" });
       }
 
@@ -134,11 +155,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: BOT_CHECK_FAILED, code: "BOT_CHECK_FAILED" });
       }
       const room = await storage.getRoom(data.roomId);
-      if (!room || !room.isAvailable) {
+      if (!room || !room.isAvailable || room.archivedAt) {
         return res.status(404).json({ error: "Room not found" });
       }
       const property = await storage.getProperty(room.propertyId);
-      if (!property?.active) {
+      if (!property?.active || property.archivedAt) {
         return res.status(404).json({ error: "Room not found" });
       }
       const totalPrice = priceBooking(room, data.checkIn, data.checkOut, data.guestsCount);
@@ -181,7 +202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Properties
   app.get("/api/properties", async (req: Request, res: Response) => {
     try {
-      res.json(await storage.getProperties(req.user!.id));
+      res.json(await storage.getProperties(req.user!.id, { archived: wantsArchived(req) }));
     } catch (error: any) {
       sendError(res, error);
     }
@@ -213,8 +234,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!(await ownsProperty(req.params.id, req.user!.id))) {
         return res.status(404).json({ error: "Property not found" });
       }
-      await storage.deleteProperty(req.params.id);
-      res.json({ success: true });
+      if (await upcomingBookingsConflict(req, res, { propertyId: req.params.id })) return;
+      res.json(await storage.setPropertyArchived(req.params.id, true));
+    } catch (error: any) {
+      sendError(res, error);
+    }
+  });
+
+  app.post("/api/properties/:id/restore", async (req: Request, res: Response) => {
+    try {
+      if (!(await ownsProperty(req.params.id, req.user!.id))) {
+        return res.status(404).json({ error: "Property not found" });
+      }
+      res.json(await storage.setPropertyArchived(req.params.id, false));
     } catch (error: any) {
       sendError(res, error);
     }
@@ -224,7 +256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/rooms", async (req: Request, res: Response) => {
     try {
       const propertyId = typeof req.query.propertyId === "string" ? req.query.propertyId : undefined;
-      res.json(await storage.getRooms({ propertyId, ownerId: req.user!.id }));
+      res.json(await storage.getRooms({ propertyId, ownerId: req.user!.id, archived: wantsArchived(req) }));
     } catch (error: any) {
       sendError(res, error);
     }
@@ -233,7 +265,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/rooms", async (req: Request, res: Response) => {
     try {
       const data = insertRoomSchema.parse(req.body);
-      if (!(await ownsProperty(data.propertyId, req.user!.id))) {
+      const property = await storage.getProperty(data.propertyId);
+      if (!property || property.ownerId !== req.user!.id || property.archivedAt) {
         return res.status(404).json({ error: "Property not found" });
       }
       res.status(201).json(await storage.createRoom(data));
@@ -264,8 +297,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!room || !(await ownsProperty(room.propertyId, req.user!.id))) {
         return res.status(404).json({ error: "Room not found" });
       }
-      await storage.deleteRoom(req.params.id);
-      res.json({ success: true });
+      if (await upcomingBookingsConflict(req, res, { roomId: req.params.id })) return;
+      res.json(await storage.setRoomArchived(req.params.id, true));
+    } catch (error: any) {
+      sendError(res, error);
+    }
+  });
+
+  app.post("/api/rooms/:id/restore", async (req: Request, res: Response) => {
+    try {
+      const room = await storage.getRoom(req.params.id);
+      if (!room || !(await ownsProperty(room.propertyId, req.user!.id))) {
+        return res.status(404).json({ error: "Room not found" });
+      }
+      res.json(await storage.setRoomArchived(req.params.id, false));
     } catch (error: any) {
       sendError(res, error);
     }
@@ -295,7 +340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const data = insertBookingSchema.omit({ totalPrice: true }).parse(req.body);
       const room = await storage.getRoom(data.roomId);
-      if (!room || !(await ownsProperty(room.propertyId, req.user!.id))) {
+      if (!room || !(await ownsProperty(room.propertyId, req.user!.id)) || !(await isBookableRoom(room))) {
         return res.status(404).json({ error: "Room not found" });
       }
       const totalPrice = priceBooking(room, data.checkIn, data.checkOut, data.guestsCount);

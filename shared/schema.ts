@@ -43,6 +43,7 @@ export const properties = pgTable("properties", {
   country: varchar("country", { length: 100 }).default("Italia").notNull(),
   roomsCount: integer("rooms_count").default(1).notNull(),
   active: boolean("active").default(true).notNull(),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -56,6 +57,7 @@ export const rooms = pgTable("rooms", {
   maxGuests: integer("max_guests").notNull(),
   pricePerNight: decimal("price_per_night", { precision: 10, scale: 2 }).notNull(),
   isAvailable: boolean("is_available").default(true).notNull(),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -109,6 +111,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
 
 export const insertPropertySchema = createInsertSchema(properties).omit({
   id: true,
+  archivedAt: true,
   createdAt: true,
   updatedAt: true,
   ownerId: true,
@@ -118,6 +121,7 @@ export const insertPropertySchema = createInsertSchema(properties).omit({
 
 export const insertRoomSchema = createInsertSchema(rooms).omit({
   id: true,
+  archivedAt: true,
   createdAt: true,
   updatedAt: true,
 });

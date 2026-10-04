@@ -9,9 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertPropertySchema, type InsertProperty, type Property } from "@shared/schema";
-import { Plus, Building2, MapPin, Trash2, Edit } from "lucide-react";
+import { Plus, Building2, MapPin, Edit } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { ArchiveButton, ArchivedList, useArchive } from "@/components/archive";
 
 export default function Properties() {
   const { toast } = useToast();
@@ -81,25 +82,7 @@ export default function Properties() {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      return apiRequest("DELETE", `/api/properties/${id}`, {});
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
-      toast({
-        title: "Successo",
-        description: "Proprietà eliminata con successo",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Errore",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  const archive = useArchive("properties");
 
   const onSubmit = (data: InsertProperty) => {
     if (editingProperty) {
@@ -327,21 +310,25 @@ export default function Properties() {
                     <Edit className="w-4 h-4 mr-2" />
                     Modifica
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => deleteMutation.mutate(property.id)}
-                    disabled={deleteMutation.isPending}
-                    data-testid={`button-delete-property-${property.id}`}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <ArchiveButton
+                    onClick={() => archive.archive(property.id)}
+                    disabled={archive.isArchiving}
+                    testId={`button-archive-property-${property.id}`}
+                  />
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      <ArchivedList<Property>
+        resource="properties"
+        describe={(p) => `${p.city}, ${p.country}`}
+        restore={archive.restore}
+        isRestoring={archive.isRestoring}
+      />
+      {archive.confirmDialog}
     </div>
   );
 }

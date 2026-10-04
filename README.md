@@ -16,6 +16,7 @@ Gestionale web per piccole strutture ricettive (B&B, agriturismi, case vacanza).
 - **Dashboard** (`/dashboard`, richiede login): gestione di strutture, camere, prenotazioni ed eventi locali, calendario e impostazioni.
 - **Calendario di prenotazione** (`/dashboard/calendario`): doppio mese con selezione del periodo, eventi locali filtrabili per categoria, camere disponibili con prezzo calcolato (notti × tariffa) e modal di prenotazione.
 - **Widget incorporabile** (`/widget/:propertyId`): la stessa esperienza del calendario, caricata in un iframe che si ridimensiona da solo tramite `client/public/widget.js`. Le impostazioni generano il codice di incorporamento.
+- **Archivio**: strutture e camere non si cancellano ma si archiviano. Spariscono da dashboard e widget, le loro prenotazioni restano, e si ripristinano dalla sezione Archivio. Se ci sono prenotazioni future attive viene chiesta conferma.
 - **Eventi locali**: categorie `sagra`, `concerto`, `fiera`, `sport`, `religioso`, `cultura`, `mercato`, `altro`.
 
 ### Stack
@@ -84,13 +85,15 @@ Tutte le rotte sono sotto `/api` e restituiscono JSON. Le rotte del widget e di 
 | Risorsa | Rotte |
 |---|---|
 | Autenticazione | `POST /api/auth/signup`, `POST /api/auth/verify-email`, `POST /api/auth/resend-verification`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password` |
-| Strutture | `GET/POST /api/properties`, `PATCH/DELETE /api/properties/:id` |
-| Camere | `GET/POST /api/rooms`, `PATCH/DELETE /api/rooms/:id` |
+| Strutture | `GET/POST /api/properties` (`?archived=true` per l'archivio), `PATCH/DELETE /api/properties/:id`, `POST /api/properties/:id/restore` |
+| Camere | `GET/POST /api/rooms` (`?archived=true` per l'archivio), `PATCH/DELETE /api/rooms/:id`, `POST /api/rooms/:id/restore` |
 | Prenotazioni | `GET/POST /api/bookings`, `PATCH/DELETE /api/bookings/:id` |
 | Eventi | `GET/POST /api/events`, `PATCH/DELETE /api/events/:id` |
 | Widget (pubblico) | `GET /api/widget/properties/:propertyId`, `POST /api/widget/bookings`, `POST /api/widget/bookings/:id/cancel` |
 
 Le prenotazioni dal widget nascono sempre `pending` e il prezzo totale è calcolato dal server.
+
+`DELETE` su strutture e camere archivia invece di cancellare. Se ci sono prenotazioni future non cancellate risponde `409` con `code: "HAS_UPCOMING_BOOKINGS"` e `upcomingBookings`; per archiviare comunque si ripete la richiesta con `?confirm=true`.
 
 ### Struttura del progetto
 
@@ -107,16 +110,15 @@ Elenco da risolvere. Ordinato per gravità.
 
 **Correttezza**
 
-1. **Soft-delete assente e cancellazioni a cascata.** Eliminare una struttura cancella camere, prenotazioni ed eventi senza backup.
-2. **Dati legacy orfani.** Le strutture create prima dell'autenticazione appartengono all'utente di sistema `00000000-0000-0000-0000-000000000000`, che non può accedere: vanno riassegnate a mano (vedi sotto). Gli account creati prima della conferma email devono confermare l'indirizzo: al login compare il pulsante per ricevere il link.
+1. **Dati legacy orfani.** Le strutture create prima dell'autenticazione appartengono all'utente di sistema `00000000-0000-0000-0000-000000000000`, che non può accedere: vanno riassegnate a mano (vedi sotto). Gli account creati prima della conferma email devono confermare l'indirizzo: al login compare il pulsante per ricevere il link.
 
 **Qualità e manutenzione**
 
-3. **Nessun test automatico** (unit, integrazione, e2e) e nessuna CI.
-4. **Funzionalità solo accennate nello schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` negli eventi non sono usate.
-5. **Nessuna paginazione** su liste di camere, prenotazioni ed eventi.
-6. **Nessuna notifica email per le prenotazioni**, né all'ospite né al proprietario.
-7. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
+2. **Nessun test automatico** (unit, integrazione, e2e) e nessuna CI.
+3. **Funzionalità solo accennate nello schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` negli eventi non sono usate.
+4. **Nessuna paginazione** su liste di camere, prenotazioni ed eventi.
+5. **Nessuna notifica email per le prenotazioni**, né all'ospite né al proprietario.
+6. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
 
 #### Riassegnare i dati legacy
 
@@ -177,6 +179,7 @@ Web-based management system for small hospitality businesses (B&Bs, farm stays, 
 - **Dashboard** (`/dashboard`, login required): manage properties, rooms, bookings and local events, plus calendar and settings.
 - **Booking calendar** (`/dashboard/calendario`): dual-month date-range picker, local events filterable by category, available rooms with computed price (nights × rate), and a booking modal.
 - **Embeddable widget** (`/widget/:propertyId`): the same calendar experience loaded in an iframe that auto-resizes through `client/public/widget.js`. The settings page generates the embed code.
+- **Archive**: properties and rooms are archived instead of deleted. They disappear from the dashboard and widget, their bookings are kept, and they can be restored from the Archive section. Archiving asks for confirmation when there are upcoming active bookings.
 - **Local events**: categories `sagra`, `concerto`, `fiera`, `sport`, `religioso`, `cultura`, `mercato`, `altro`.
 
 ### Tech stack
@@ -245,13 +248,15 @@ All routes live under `/api` and return JSON. Widget and auth routes are public;
 | Resource | Routes |
 |---|---|
 | Auth | `POST /api/auth/signup`, `POST /api/auth/verify-email`, `POST /api/auth/resend-verification`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password` |
-| Properties | `GET/POST /api/properties`, `PATCH/DELETE /api/properties/:id` |
-| Rooms | `GET/POST /api/rooms`, `PATCH/DELETE /api/rooms/:id` |
+| Properties | `GET/POST /api/properties` (`?archived=true` for the archive), `PATCH/DELETE /api/properties/:id`, `POST /api/properties/:id/restore` |
+| Rooms | `GET/POST /api/rooms` (`?archived=true` for the archive), `PATCH/DELETE /api/rooms/:id`, `POST /api/rooms/:id/restore` |
 | Bookings | `GET/POST /api/bookings`, `PATCH/DELETE /api/bookings/:id` |
 | Events | `GET/POST /api/events`, `PATCH/DELETE /api/events/:id` |
 | Widget (public) | `GET /api/widget/properties/:propertyId`, `POST /api/widget/bookings`, `POST /api/widget/bookings/:id/cancel` |
 
 Widget bookings are always created as `pending`, and the total price is computed server-side.
+
+`DELETE` on properties and rooms archives instead of deleting. With upcoming non-cancelled bookings it returns `409` with `code: "HAS_UPCOMING_BOOKINGS"` and `upcomingBookings`; repeat the request with `?confirm=true` to archive anyway.
 
 ### Project structure
 
@@ -268,16 +273,15 @@ To be fixed. Ordered by severity.
 
 **Correctness**
 
-1. **No soft delete, cascading hard deletes.** Deleting a property wipes its rooms, bookings and events with no backup.
-2. **Orphaned legacy data.** Properties created before authentication belong to the system user `00000000-0000-0000-0000-000000000000`, which cannot log in: reassign them manually (see below). Accounts created before email confirmation must confirm their address: the login page offers a button to get the link.
+1. **Orphaned legacy data.** Properties created before authentication belong to the system user `00000000-0000-0000-0000-000000000000`, which cannot log in: reassign them manually (see below). Accounts created before email confirmation must confirm their address: the login page offers a button to get the link.
 
 **Quality and maintenance**
 
-3. **No automated tests** (unit, integration, e2e) and no CI.
-4. **Half-built features in the schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` on events are unused.
-5. **No pagination** on room, booking and event lists.
-6. **No booking email notifications** to the guest or owner.
-7. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
+2. **No automated tests** (unit, integration, e2e) and no CI.
+3. **Half-built features in the schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` on events are unused.
+4. **No pagination** on room, booking and event lists.
+5. **No booking email notifications** to the guest or owner.
+6. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
 
 #### Reassigning legacy data
 

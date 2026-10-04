@@ -1,7 +1,7 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 export class ApiError extends Error {
-  constructor(message: string, public status: number, public code?: string) {
+  constructor(message: string, public status: number, public code?: string, public body?: Record<string, unknown>) {
     super(message);
   }
 }
@@ -11,12 +11,13 @@ async function throwIfResNotOk(res: Response) {
     const text = (await res.text()) || res.statusText;
     let message = text;
     let code: string | undefined;
+    let body: Record<string, unknown> | undefined;
     try {
-      const body = JSON.parse(text);
-      message = body.error || body.message || text;
-      code = body.code;
+      body = JSON.parse(text);
+      message = (body?.error || body?.message || text) as string;
+      code = body?.code as string | undefined;
     } catch {}
-    throw new ApiError(message, res.status, code);
+    throw new ApiError(message, res.status, code, body);
   }
 }
 

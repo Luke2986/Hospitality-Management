@@ -1,4 +1,4 @@
-import { eq, ne, desc, and, sql, inArray, isNull, gt, gte, lt, type SQL } from "drizzle-orm";
+import { eq, ne, desc, and, sql, inArray, isNull, isNotNull, gt, gte, lt, type SQL } from "drizzle-orm";
 import { db } from "./db";
 import { 
   users, 
@@ -56,18 +56,18 @@ export interface IStorage {
   invalidateAuthTokens(userId: string, type: AuthTokenType): Promise<void>;
 
   // Properties
-  getProperties(ownerId: string): Promise<Property[]>;
+  getProperties(ownerId: string, options?: { archived?: boolean }): Promise<Property[]>;
   getProperty(id: string): Promise<Property | undefined>;
   createProperty(property: InsertProperty): Promise<Property>;
   updateProperty(id: string, data: Partial<InsertProperty>): Promise<Property | undefined>;
-  deleteProperty(id: string): Promise<void>;
+  setPropertyArchived(id: string, archived: boolean): Promise<Property | undefined>;
 
   // Rooms
-  getRooms(filters?: { propertyId?: string; ownerId?: string }): Promise<Room[]>;
+  getRooms(filters?: { propertyId?: string; ownerId?: string; archived?: boolean }): Promise<Room[]>;
   getRoom(id: string): Promise<Room | undefined>;
   createRoom(room: InsertRoom): Promise<Room>;
   updateRoom(id: string, data: Partial<InsertRoom>): Promise<Room | undefined>;
-  deleteRoom(id: string): Promise<void>;
+  setRoomArchived(id: string, archived: boolean): Promise<Room | undefined>;
 
   // Bookings
   getBookings(filters?: {
@@ -83,6 +83,7 @@ export interface IStorage {
   createBookingIfAvailable(booking: InsertBooking): Promise<Booking | null>;
   updateBookingIfAvailable(id: string, data: Partial<InsertBooking>): Promise<Booking | null>;
   getBookedRanges(propertyId: string, fromDate: string): Promise<BookedRange[]>;
+  countUpcomingBookings(filter: { propertyId?: string; roomId?: string }, today: string): Promise<number>;
   updateBooking(id: string, data: Partial<InsertBooking>): Promise<Booking | undefined>;
   deleteBooking(id: string): Promise<void>;
 
@@ -96,6 +97,12 @@ export interface IStorage {
 
 function ownedPropertyIds(ownerId: string) {
   return db.select({ id: properties.id }).from(properties).where(eq(properties.ownerId, ownerId));
+}
+
+function activePropertyIds(ownerId?: string) {
+  const conditions: SQL[] = [isNull(properties.archivedAt)];
+  if (ownerId) conditions.push(eq(properties.ownerId, ownerId));
+  return db.select({ id: properties.id }).from(properties).where(and(...conditions));
 }
 
 export class DatabaseStorage implements IStorage {
@@ -151,8 +158,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Properties
-  async getProperties(ownerId: string): Promise<Property[]> {
-    return db.select().from(properties).where(eq(properties.ownerId, ownerId)).orderBy(desc(properties.createdAt));
+  async getProperties(ownerId: string, options?: { archived?: boolean }): Promise<Property[]> {
+    return db.select().from(properties)
+      .where(and(
+        eq(properties.ownerId, ownerId),
+        options?.archived ? isNotNull(properties.archivedAt) : isNull(properties.archivedAt),
+      ))
+      .orderBy(desc(options?.archived ? properties.archivedAt : properties.createdAt));
   }
 
   async getProperty(id: string): Promise<Property | undefined> {
@@ -173,16 +185,26 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async deleteProperty(id: string): Promise<void> {
-    await db.delete(properties).where(eq(properties.id, id));
+  async setPropertyArchived(id: string, archived: boolean): Promise<Property | undefined> {
+    const [updated] = await db.update(properties)
+      .set({ archivedAt: archived ? new Date() : null, updatedAt: new Date() })
+      .where(eq(properties.id, id))
+      .returning();
+    return updated;
   }
 
   // Rooms
-  async getRooms(filters?: { propertyId?: string; ownerId?: string }): Promise<Room[]> {
-    const conditions: SQL[] = [];
+  // Rooms of an archived property are hidden with it and come back when the property is restored,
+  // so the archived list only holds rooms archived on their own.
+  async getRooms(filters?: { propertyId?: string; ownerId?: string; archived?: boolean }): Promise<Room[]> {
+    const conditions: SQL[] = [
+      inArray(rooms.propertyId, activePropertyIds(filters?.ownerId)),
+      filters?.archived ? isNotNull(rooms.archivedAt) : isNull(rooms.archivedAt),
+    ];
     if (filters?.propertyId) conditions.push(eq(rooms.propertyId, filters.propertyId));
-    if (filters?.ownerId) conditions.push(inArray(rooms.propertyId, ownedPropertyIds(filters.ownerId)));
-    return db.select().from(rooms).where(and(...conditions)).orderBy(desc(rooms.createdAt));
+    return db.select().from(rooms)
+      .where(and(...conditions))
+      .orderBy(desc(filters?.archived ? rooms.archivedAt : rooms.createdAt));
   }
 
   async getRoom(id: string): Promise<Room | undefined> {
@@ -203,8 +225,12 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async deleteRoom(id: string): Promise<void> {
-    await db.delete(rooms).where(eq(rooms.id, id));
+  async setRoomArchived(id: string, archived: boolean): Promise<Room | undefined> {
+    const [updated] = await db.update(rooms)
+      .set({ archivedAt: archived ? new Date() : null, updatedAt: new Date() })
+      .where(eq(rooms.id, id))
+      .returning();
+    return updated;
   }
 
   // Bookings
@@ -288,6 +314,14 @@ export class DatabaseStorage implements IStorage {
       ));
   }
 
+  async countUpcomingBookings(filter: { propertyId?: string; roomId?: string }, today: string): Promise<number> {
+    const conditions: SQL[] = [ne(bookings.status, "cancelled"), gt(bookings.checkOut, today)];
+    if (filter.propertyId) conditions.push(eq(bookings.propertyId, filter.propertyId));
+    if (filter.roomId) conditions.push(eq(bookings.roomId, filter.roomId));
+    const [row] = await db.select({ count: sql<number>`count(*)::int` }).from(bookings).where(and(...conditions));
+    return row.count;
+  }
+
   async updateBooking(id: string, data: Partial<InsertBooking>): Promise<Booking | undefined> {
     const [updated] = await db.update(bookings)
       .set({ ...data, updatedAt: new Date() })
@@ -304,7 +338,7 @@ export class DatabaseStorage implements IStorage {
   async getEvents(filters?: { propertyId?: string; ownerId?: string }): Promise<Event[]> {
     const conditions: SQL[] = [];
     if (filters?.propertyId) conditions.push(eq(events.propertyId, filters.propertyId));
-    if (filters?.ownerId) conditions.push(inArray(events.propertyId, ownedPropertyIds(filters.ownerId)));
+    if (filters?.ownerId) conditions.push(inArray(events.propertyId, activePropertyIds(filters.ownerId)));
     return db.select().from(events).where(and(...conditions)).orderBy(desc(events.eventDate));
   }
 

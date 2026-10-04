@@ -11,9 +11,10 @@ import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertRoomSchema, type InsertRoom, type Room, type Property } from "@shared/schema";
-import { Plus, Bed, Users, Euro, Trash2, Edit } from "lucide-react";
+import { Plus, Bed, Users, Euro, Edit } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { ArchiveButton, ArchivedList, useArchive } from "@/components/archive";
 
 export default function RoomsManagement() {
   const { toast } = useToast();
@@ -79,18 +80,7 @@ export default function RoomsManagement() {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      return apiRequest("DELETE", `/api/rooms/${id}`, {});
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/rooms"] });
-      toast({
-        title: "Successo",
-        description: "Camera eliminata con successo",
-      });
-    },
-  });
+  const archive = useArchive("rooms");
 
   const onSubmit = (data: InsertRoom) => {
     if (editingRoom) {
@@ -345,21 +335,25 @@ export default function RoomsManagement() {
                     <Edit className="w-4 h-4 mr-2" />
                     Modifica
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => deleteMutation.mutate(room.id)}
-                    disabled={deleteMutation.isPending}
-                    data-testid={`button-delete-room-${room.id}`}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <ArchiveButton
+                    onClick={() => archive.archive(room.id)}
+                    disabled={archive.isArchiving}
+                    testId={`button-archive-room-${room.id}`}
+                  />
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      <ArchivedList<Room>
+        resource="rooms"
+        describe={(r) => properties?.find((p) => p.id === r.propertyId)?.name ?? ""}
+        restore={archive.restore}
+        isRestoring={archive.isRestoring}
+      />
+      {archive.confirmDialog}
     </div>
   );
 }
