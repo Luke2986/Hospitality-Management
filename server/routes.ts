@@ -4,6 +4,7 @@ import { z } from "zod";
 import { storage } from "./storage";
 import { setupAuth, requireAuth, rateLimit } from "./auth";
 import { turnstileSiteKey, verifyTurnstile } from "./turnstile";
+import { logError } from "./log-error";
 import {
   insertPropertySchema,
   insertRoomSchema,
@@ -47,7 +48,7 @@ function sendError(res: Response, error: any) {
   if (error instanceof HttpError) {
     return res.status(error.status).json({ error: error.message });
   }
-  console.error(`${res.req.method} ${res.req.path} failed:`, error);
+  logError(`${res.req.method} ${res.req.path}`, error);
   res.status(500).json({ error: INTERNAL_ERROR });
 }
 

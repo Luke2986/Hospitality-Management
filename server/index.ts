@@ -1,6 +1,7 @@
 import "./env";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes, INTERNAL_ERROR } from "./routes";
+import { logError } from "./log-error";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
@@ -19,33 +20,14 @@ app.use((req, res, next) => {
   next();
 });
 
+// Logs only method, path, status and timing: response bodies contain guests' personal data.
 app.use((req, res, next) => {
   const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
   res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
+    if (req.path.startsWith("/api")) {
+      log(`${req.method} ${req.path} ${res.statusCode} in ${Date.now() - start}ms`);
     }
   });
-
   next();
 });
 
@@ -55,7 +37,7 @@ app.use((req, res, next) => {
   app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     if (status >= 500) {
-      console.error(`${req.method} ${req.path} failed:`, err);
+      logError(`${req.method} ${req.path}`, err);
     }
     if (res.headersSent) return next(err);
     res.status(status).json({ error: status >= 500 ? INTERNAL_ERROR : err.message });
