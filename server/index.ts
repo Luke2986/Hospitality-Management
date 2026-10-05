@@ -1,6 +1,7 @@
 import "./env";
 import { createApp } from "./app";
 import { setupVite, serveStatic, log } from "./vite";
+import { startGuestDataRetention } from "./retention";
 
 (async () => {
   const { app, server } = await createApp();
@@ -15,6 +16,8 @@ import { setupVite, serveStatic, log } from "./vite";
   }
 
   const port = parseInt(process.env.PORT || '5000', 10);
+  startGuestDataRetention();
+
   server.listen({
     port,
     host: "0.0.0.0",

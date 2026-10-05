@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { setupAuth, requireAuth, rateLimit } from "./auth";
 import { turnstileSiteKey, verifyTurnstile } from "./turnstile";
 import { logError } from "./log-error";
+import { guestDataRetentionMonths } from "./retention";
 import { sendBookingReceivedEmail, sendBookingStatusEmail, sendInBackground, sendOwnerBookingEmail } from "./email";
 import {
   insertPropertySchema,
@@ -12,6 +13,7 @@ import {
   insertBookingSchema,
   insertEventSchema,
   bookingStatusSchema,
+  privacySettingsSchema,
   type Booking,
   type Property,
   type Room,
@@ -157,8 +159,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bookedRanges = await storage.getBookedRanges({ propertyId }, fromDate);
 
       const { ownerId: _ownerId, ...publicProperty } = property;
+      const owner = await storage.getUser(property.ownerId);
       res.json({
         property: publicProperty,
+        // Published on purpose: the privacy notice must name the data controller and how to reach them.
+        privacy: {
+          controllerName: owner?.privacyControllerName || property.name,
+          controllerAddress: owner?.privacyControllerAddress ?? null,
+          contactEmail: owner?.privacyContactEmail ?? null,
+          retentionMonths: guestDataRetentionMonths(),
+          botProtection: turnstileSiteKey() !== null,
+        },
         rooms,
         events,
         bookedRanges,
@@ -401,7 +412,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = updateBookingSchema.parse(req.body);
       const updated = await storage.updateBookingIfAvailable(req.params.id, data);
       if (!updated) return res.status(409).json({ error: ROOM_UNAVAILABLE });
-      if (updated.status !== booking.status && updated.status !== "pending") {
+      if (updated.status !== booking.status && updated.status !== "pending" && !updated.anonymizedAt) {
         sendInBackground(() => notifyGuestOfStatus(updated));
       }
       res.json(updated);
@@ -418,6 +429,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       await storage.deleteBooking(req.params.id);
       res.json({ success: true });
+    } catch (error: any) {
+      sendError(res, error);
+    }
+  });
+
+  // Right to erasure: the owner can strip a guest's personal data on request.
+  app.post("/api/bookings/:id/anonymize", async (req: Request, res: Response) => {
+    try {
+      const booking = await storage.getBooking(req.params.id);
+      if (!booking || !(await ownsProperty(booking.propertyId, req.user!.id))) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+      res.json(await storage.anonymizeBooking(booking.id));
+    } catch (error: any) {
+      sendError(res, error);
+    }
+  });
+
+  app.get("/api/account/privacy", async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.user!.id);
+      res.json({
+        privacyControllerName: user?.privacyControllerName ?? null,
+        privacyControllerAddress: user?.privacyControllerAddress ?? null,
+        privacyContactEmail: user?.privacyContactEmail ?? null,
+      });
+    } catch (error: any) {
+      sendError(res, error);
+    }
+  });
+
+  app.put("/api/account/privacy", async (req: Request, res: Response) => {
+    try {
+      const data = privacySettingsSchema.parse(req.body);
+      const user = await storage.updatePrivacySettings(req.user!.id, data);
+      res.json({
+        privacyControllerName: user.privacyControllerName,
+        privacyControllerAddress: user.privacyControllerAddress,
+        privacyContactEmail: user.privacyContactEmail,
+      });
     } catch (error: any) {
       sendError(res, error);
     }

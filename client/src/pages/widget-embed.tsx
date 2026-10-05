@@ -7,6 +7,7 @@ import { RoomsGrid } from '@/components/calendar/RoomsGrid';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Property, Room, Event } from '@shared/schema';
 import { availableRooms, type BookedRange } from '@/lib/availability';
+import type { PrivacyInfo } from '@/pages/privacy-notice';
 
 interface WidgetData {
   property: Property;
@@ -14,6 +15,7 @@ interface WidgetData {
   events: Event[];
   bookedRanges: BookedRange[];
   turnstileSiteKey: string | null;
+  privacy: PrivacyInfo;
 }
 
 export default function WidgetEmbedPage() {
@@ -114,6 +116,7 @@ export default function WidgetEmbedPage() {
                   rooms={freeRooms}
                   selectedDates={selectedDates}
                   turnstileSiteKey={widgetData.turnstileSiteKey}
+                  privacyNoticeUrl={`/widget/${propertyId}/privacy`}
                 />
               )}
 

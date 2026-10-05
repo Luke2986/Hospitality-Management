@@ -19,6 +19,7 @@ import {
   type InsertBooking,
   type Event,
   type InsertEvent,
+  type PrivacySettings,
 } from "@shared/schema";
 
 export type BookedRange = { roomId: string; checkIn: string; checkOut: string };
@@ -68,6 +69,7 @@ async function hasOverlap(tx: Tx, roomId: string, checkIn: string, checkOut: str
 export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
+  updatePrivacySettings(userId: string, data: PrivacySettings): Promise<User>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   markEmailVerified(userId: string): Promise<void>;
@@ -103,6 +105,8 @@ export interface IStorage {
   countUpcomingBookings(filter: { propertyId?: string; roomId?: string }, today: string): Promise<number>;
   updateBooking(id: string, data: Partial<InsertBooking>): Promise<Booking | undefined>;
   deleteBooking(id: string): Promise<void>;
+  anonymizeBooking(id: string): Promise<Booking>;
+  anonymizeBookingsEndedBefore(months: number): Promise<number>;
 
   // Events
   getEvents(filters: EventFilters, page?: Page): Promise<Event[]>;
@@ -112,6 +116,16 @@ export interface IStorage {
   updateEvent(id: string, data: Partial<InsertEvent>): Promise<Event | undefined>;
   deleteEvent(id: string): Promise<void>;
 }
+
+// Dates, prices and status stay for statistics; everything that identifies the guest goes.
+const ANONYMIZED_GUEST = {
+  guestName: "Ospite anonimizzato",
+  guestEmail: "anonimizzato@invalid",
+  guestPhone: null,
+  notes: null,
+  anonymizedAt: sql`now()`,
+  updatedAt: sql`now()`,
+};
 
 function ownedPropertyIds(ownerId: string) {
   return db.select({ id: properties.id }).from(properties).where(eq(properties.ownerId, ownerId));
@@ -145,6 +159,11 @@ function eventConditions(filters: EventFilters) {
 
 export class DatabaseStorage implements IStorage {
   // Users
+  async updatePrivacySettings(userId: string, data: PrivacySettings): Promise<User> {
+    const [user] = await db.update(users).set({ ...data, updatedAt: new Date() }).where(eq(users.id, userId)).returning();
+    return user;
+  }
+
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
@@ -372,6 +391,22 @@ export class DatabaseStorage implements IStorage {
       .where(eq(bookings.id, id))
       .returning();
     return updated;
+  }
+
+  async anonymizeBooking(id: string): Promise<Booking> {
+    const [booking] = await db.update(bookings).set(ANONYMIZED_GUEST).where(eq(bookings.id, id)).returning();
+    return booking;
+  }
+
+  async anonymizeBookingsEndedBefore(months: number): Promise<number> {
+    const anonymized = await db.update(bookings)
+      .set(ANONYMIZED_GUEST)
+      .where(and(
+        isNull(bookings.anonymizedAt),
+        sql`${bookings.checkOut} < current_date - make_interval(months => ${months})`,
+      ))
+      .returning({ id: bookings.id });
+    return anonymized.length;
   }
 
   async deleteBooking(id: string): Promise<void> {

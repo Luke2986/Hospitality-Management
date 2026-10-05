@@ -9,7 +9,17 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, parseISO } from "date-fns";
 import type { Booking, Room } from "@shared/schema";
-import { Check, X, Mail, Search, Filter } from "lucide-react";
+import { Check, X, Mail, Search, Filter, UserX } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { fetchPage, PaginationControls, type PageResult } from "@/components/pagination";
@@ -66,6 +76,17 @@ export default function Bookings() {
         variant: "destructive",
       });
     },
+  });
+
+  const [anonymizing, setAnonymizing] = useState<Booking | null>(null);
+  const anonymizeMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("POST", `/api/bookings/${id}/anonymize`),
+    onSuccess: () => {
+      setAnonymizing(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      toast({ title: "Dati dell'ospite cancellati" });
+    },
+    onError: (error: Error) => toast({ title: "Errore", description: error.message, variant: "destructive" }),
   });
 
   const getStatusBadge = (status: string) => {
@@ -218,7 +239,9 @@ export default function Bookings() {
                     <TableCell>
                       <div>
                         <div className="font-medium">{booking.guestName}</div>
-                        <div className="text-sm text-muted-foreground">{booking.guestEmail}</div>
+                        {!booking.anonymizedAt && (
+                          <div className="text-sm text-muted-foreground">{booking.guestEmail}</div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>{format(parseISO(booking.checkIn), "MMM d, yyyy")}</TableCell>
@@ -250,15 +273,24 @@ export default function Bookings() {
                             </Button>
                           </>
                         )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          asChild
-                        >
-                          <a href={`mailto:${booking.guestEmail}`} data-testid={`button-email-${booking.id}`}>
-                            <Mail className="w-4 h-4" />
-                          </a>
-                        </Button>
+                        {!booking.anonymizedAt && (
+                          <>
+                            <Button variant="outline" size="sm" asChild>
+                              <a href={`mailto:${booking.guestEmail}`} data-testid={`button-email-${booking.id}`}>
+                                <Mail className="w-4 h-4" />
+                              </a>
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              title="Cancella i dati dell'ospite"
+                              onClick={() => setAnonymizing(booking)}
+                              data-testid={`button-anonymize-${booking.id}`}
+                            >
+                              <UserX className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -270,6 +302,27 @@ export default function Bookings() {
       )}
 
       <PaginationControls page={page} total={data?.total ?? 0} onPageChange={setPage} />
+
+      <AlertDialog open={anonymizing !== null} onOpenChange={(open) => !open && setAnonymizing(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancellare i dati di {anonymizing?.guestName}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Nome, email, telefono e note vengono cancellati definitivamente; restano date, importo e stato. Usalo quando
+              un ospite chiede la cancellazione dei suoi dati. Non si può annullare.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => anonymizing && anonymizeMutation.mutate(anonymizing.id)}
+              data-testid="button-confirm-anonymize"
+            >
+              Cancella dati
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

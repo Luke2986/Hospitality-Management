@@ -8,9 +8,10 @@ interface RoomsGridProps {
   rooms: Room[];
   selectedDates: { from?: Date; to?: Date };
   turnstileSiteKey?: string | null;
+  privacyNoticeUrl?: string;
 }
 
-export function RoomsGrid({ rooms, selectedDates, turnstileSiteKey }: RoomsGridProps) {
+export function RoomsGrid({ rooms, selectedDates, turnstileSiteKey, privacyNoticeUrl }: RoomsGridProps) {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -56,6 +57,7 @@ export function RoomsGrid({ rooms, selectedDates, turnstileSiteKey }: RoomsGridP
           selectedDates={selectedDates}
           nights={nights}
           turnstileSiteKey={turnstileSiteKey}
+          privacyNoticeUrl={privacyNoticeUrl}
         />
       )}
     </>

@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Copy, ExternalLink, Code2, CheckCircle2 } from "lucide-react";
 import type { User, Property } from "@shared/schema";
 import { useState } from "react";
+import { PrivacySettingsCard } from "@/components/privacy-settings";
 
 export default function Settings() {
   const { toast } = useToast();
@@ -67,6 +68,9 @@ export default function Settings() {
           </TabsTrigger>
           <TabsTrigger value="account" data-testid="tab-account">
             Account
+          </TabsTrigger>
+          <TabsTrigger value="privacy" data-testid="tab-privacy">
+            Privacy
           </TabsTrigger>
         </TabsList>
 
@@ -199,6 +203,10 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="privacy">
+          <PrivacySettingsCard />
         </TabsContent>
       </Tabs>
     </div>

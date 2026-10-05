@@ -78,6 +78,9 @@ export class Client {
   patch<T = any>(path: string, body: unknown) {
     return this.request<T>("PATCH", path, body);
   }
+  put<T = any>(path: string, body: unknown) {
+    return this.request<T>("PUT", path, body);
+  }
   delete<T = any>(path: string) {
     return this.request<T>("DELETE", path);
   }

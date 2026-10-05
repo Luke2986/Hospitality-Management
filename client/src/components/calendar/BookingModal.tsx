@@ -16,9 +16,10 @@ interface BookingModalProps {
   selectedDates: { from?: Date; to?: Date };
   nights: number;
   turnstileSiteKey?: string | null;
+  privacyNoticeUrl?: string;
 }
 
-export function BookingModal({ isOpen, onClose, room, selectedDates, nights, turnstileSiteKey }: BookingModalProps) {
+export function BookingModal({ isOpen, onClose, room, selectedDates, nights, turnstileSiteKey, privacyNoticeUrl }: BookingModalProps) {
   const [step, setStep] = useState<'form' | 'review' | 'success'>('form');
   const { toast } = useToast();
   
@@ -332,6 +333,16 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights, tur
                     onToken={setTurnstileToken}
                     resetKey={turnstileResetKey}
                   />
+                )}
+
+                {privacyNoticeUrl && (
+                  <p className="text-xs text-muted-foreground text-center" data-testid="text-privacy-notice">
+                    I tuoi dati servono solo a gestire la prenotazione. Leggi l'{" "}
+                    <a href={privacyNoticeUrl} target="_blank" rel="noopener noreferrer" className="underline">
+                      informativa privacy
+                    </a>
+                    .
+                  </p>
                 )}
 
                 <div className="flex gap-3 pt-2">

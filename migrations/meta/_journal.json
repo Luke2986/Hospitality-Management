@@ -36,6 +36,13 @@
       "when": 1791199984021,
       "tag": "0004_orange_genesis",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791200962797,
+      "tag": "0005_lyrical_cobalt_man",
+      "breakpoints": true
     }
   ]
 }

@@ -20,6 +20,7 @@ import Bookings from "@/pages/bookings";
 import Events from "@/pages/events";
 import Settings from "@/pages/settings";
 import WidgetEmbed from "@/pages/widget-embed";
+import PrivacyNotice from "@/pages/privacy-notice";
 import CalendarPage from "@/pages/calendar";
 import NotFound from "@/pages/not-found";
 
@@ -60,6 +61,7 @@ function Router() {
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/widget/:propertyId" component={WidgetEmbed} />
+      <Route path="/widget/:propertyId/privacy" component={PrivacyNotice} />
       
       <Route path="/dashboard">
         <DashboardLayout>

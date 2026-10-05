@@ -10,6 +10,10 @@ export const users = pgTable("users", {
   password: text("password"), // Nullable - system users don't need password
   fullName: text("full_name"),
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+  // Data controller shown in the guest privacy notice (GDPR art. 13): each owner controls their guests' data.
+  privacyControllerName: text("privacy_controller_name"),
+  privacyControllerAddress: text("privacy_controller_address"),
+  privacyContactEmail: text("privacy_contact_email"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -76,6 +80,7 @@ export const bookings = pgTable("bookings", {
   totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
   status: varchar("status", { length: 20 }).default("pending").notNull(),
   notes: text("notes"),
+  anonymizedAt: timestamp("anonymized_at", { withTimezone: true }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -101,6 +106,9 @@ export const events = pgTable("events", {
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   emailVerifiedAt: true,
+  privacyControllerName: true,
+  privacyControllerAddress: true,
+  privacyContactEmail: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -124,6 +132,7 @@ export const insertRoomSchema = createInsertSchema(rooms).omit({
 
 export const insertBookingSchema = createInsertSchema(bookings).omit({
   id: true,
+  anonymizedAt: true,
   createdAt: true,
   updatedAt: true,
   propertyId: true,
@@ -140,6 +149,15 @@ export const insertEventSchema = createInsertSchema(events).omit({
 });
 
 // Types
+const optionalText = (max: number) => z.string().trim().max(max).transform((value) => value || null);
+
+export const privacySettingsSchema = z.object({
+  privacyControllerName: optionalText(200),
+  privacyControllerAddress: optionalText(500),
+  privacyContactEmail: z.union([z.literal(""), z.string().trim().email("Email non valida").max(200)]).transform((value) => value || null),
+});
+export type PrivacySettings = z.infer<typeof privacySettingsSchema>;
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 

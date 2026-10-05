@@ -18,6 +18,7 @@ Gestionale web per piccole strutture ricettive (B&B, agriturismi, case vacanza).
 - **Widget incorporabile** (`/widget/:propertyId`): la stessa esperienza del calendario, caricata in un iframe che si ridimensiona da solo tramite `client/public/widget.js`. Le impostazioni generano il codice di incorporamento.
 - **Notifiche email**: l'ospite riceve un'email quando invia una richiesta dal widget e quando viene confermata o annullata; il proprietario riceve ogni nuova richiesta e ogni annullamento da parte dell'ospite. Rispondendo all'email si scrive direttamente all'altra parte.
 - **Archivio**: strutture e camere non si cancellano ma si archiviano. Spariscono da dashboard e widget, le loro prenotazioni restano, e si ripristinano dalla sezione Archivio. Se ci sono prenotazioni future attive viene chiesta conferma.
+- **Privacy degli ospiti**: il widget mostra sotto il pulsante di prenotazione il link all'informativa (`/widget/:propertyId/privacy`, art. 13 GDPR). Il titolare del trattamento è il proprietario: nome, indirizzo ed email di contatto si impostano in Impostazioni → Privacy. Nome, email, telefono e note degli ospiti vengono anonimizzati automaticamente dopo `GUEST_DATA_RETENTION_MONTHS` mesi dal check-out (default 24) e si possono cancellare a mano dalla lista prenotazioni. L'informativa è un modello: falla verificare da un consulente.
 - **Eventi locali**: categorie `sagra`, `concerto`, `fiera`, `sport`, `religioso`, `cultura`, `mercato`, `altro`.
 
 ### Stack
@@ -58,6 +59,7 @@ Il server e `npm run db:push` leggono il file `.env` nella cartella del progetto
 | `EMAIL_FROM` | sì in produzione | Mittente delle email, es. `Hospitality Manager <noreply@tuodominio.it>` (dominio verificato su Resend) |
 | `APP_URL` | sì in produzione | URL pubblico dell'app, usato per i link nelle email (es. `https://gestionale.tuodominio.it`) |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | no | Chiavi di [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) (gratuito) per la verifica anti-bot sulle prenotazioni del widget. Vanno impostate entrambe o nessuna; senza chiavi resta attivo solo il campo trappola nascosto |
+| `GUEST_DATA_RETENTION_MONTHS` | no | Mesi dopo il check-out oltre i quali i dati personali degli ospiti vengono anonimizzati (default `24`). Il controllo gira all'avvio e poi una volta al giorno |
 | `PORT` | no | Porta del server (default `5000`) |
 | `TEST_DATABASE_URL` | solo per `npm test` | Database PostgreSQL usa e getta per i test. I test ne cancellano tutti i dati: non usare mai un database con dati veri |
 
@@ -91,9 +93,10 @@ Tutte le rotte sono sotto `/api` e restituiscono JSON. Le rotte del widget e di 
 | Autenticazione | `POST /api/auth/signup`, `POST /api/auth/verify-email`, `POST /api/auth/resend-verification`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password` |
 | Strutture | `GET/POST /api/properties` (`?archived=true` per l'archivio), `PATCH/DELETE /api/properties/:id`, `POST /api/properties/:id/restore` |
 | Camere | `GET/POST /api/rooms` (`?archived=true` per l'archivio), `PATCH/DELETE /api/rooms/:id`, `POST /api/rooms/:id/restore` |
-| Prenotazioni | `GET/POST /api/bookings`, `PATCH/DELETE /api/bookings/:id` |
+| Prenotazioni | `GET/POST /api/bookings`, `PATCH/DELETE /api/bookings/:id`, `POST /api/bookings/:id/anonymize` |
 | Eventi | `GET/POST /api/events`, `PATCH/DELETE /api/events/:id` |
 | Calendario e dashboard | `GET /api/calendar`, `GET /api/dashboard/summary?today=AAAA-MM-GG` |
+| Account | `GET/PUT /api/account/privacy` (dati del titolare del trattamento) |
 | Widget (pubblico) | `GET /api/widget/properties/:propertyId`, `POST /api/widget/bookings`, `POST /api/widget/bookings/:id/cancel` |
 
 Le prenotazioni dal widget nascono sempre `pending` e il prezzo totale è calcolato dal server.
@@ -106,7 +109,7 @@ Le prenotazioni dal widget nascono sempre `pending` e il prezzo totale è calcol
 
 ```
 client/      Frontend React (pagine, componenti, widget.js)
-server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, env.ts, turnstile.ts, log-error.ts, claim-legacy.ts, app.ts, index.ts
+server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, env.ts, turnstile.ts, log-error.ts, claim-legacy.ts, retention.ts, app.ts, index.ts
 shared/      Schema Drizzle e schemi Zod condivisi
 tests/       Test di integrazione (node:test) sulle API
 migrations/  Migrazioni generate da Drizzle Kit
@@ -119,7 +122,6 @@ Elenco da risolvere. Ordinato per gravità.
 **Qualità e manutenzione**
 
 1. **Nessun test sul frontend:** i test coprono le API, non l'interfaccia.
-2. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
 
 ### Aggiornare da una versione senza account
 
@@ -184,6 +186,7 @@ Web-based management system for small hospitality businesses (B&Bs, farm stays, 
 - **Embeddable widget** (`/widget/:propertyId`): the same calendar experience loaded in an iframe that auto-resizes through `client/public/widget.js`. The settings page generates the embed code.
 - **Email notifications**: guests get an email when they send a request from the widget and when it is confirmed or cancelled; owners get every new request and every guest cancellation. Replying to an email writes directly to the other party.
 - **Archive**: properties and rooms are archived instead of deleted. They disappear from the dashboard and widget, their bookings are kept, and they can be restored from the Archive section. Archiving asks for confirmation when there are upcoming active bookings.
+- **Guest privacy**: the widget shows a link to the privacy notice under the booking button (`/widget/:propertyId/privacy`, GDPR art. 13). The owner is the data controller: name, address and contact email are set in Impostazioni → Privacy. Guests' name, email, phone and notes are anonymized automatically `GUEST_DATA_RETENTION_MONTHS` months after check-out (default 24) and can be erased by hand from the bookings list. The notice is a template: have it checked by a consultant.
 - **Local events**: categories `sagra`, `concerto`, `fiera`, `sport`, `religioso`, `cultura`, `mercato`, `altro`.
 
 ### Tech stack
@@ -224,6 +227,7 @@ The server and `npm run db:push` read the `.env` file in the project folder (see
 | `EMAIL_FROM` | yes in production | Email sender, e.g. `Hospitality Manager <noreply@yourdomain.com>` (domain verified on Resend) |
 | `APP_URL` | yes in production | Public URL of the app, used for links in emails (e.g. `https://app.yourdomain.com`) |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | no | [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) keys (free) for bot protection on widget bookings. Set both or neither; without them only the hidden honeypot field is active |
+| `GUEST_DATA_RETENTION_MONTHS` | no | Months after check-out after which guests' personal data is anonymized (default `24`). The check runs at startup and then once a day |
 | `PORT` | no | Server port (default `5000`) |
 | `TEST_DATABASE_URL` | only for `npm test` | Disposable PostgreSQL database for the tests. The tests wipe all its data: never point it at real data |
 
@@ -257,9 +261,10 @@ All routes live under `/api` and return JSON. Widget and auth routes are public;
 | Auth | `POST /api/auth/signup`, `POST /api/auth/verify-email`, `POST /api/auth/resend-verification`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password` |
 | Properties | `GET/POST /api/properties` (`?archived=true` for the archive), `PATCH/DELETE /api/properties/:id`, `POST /api/properties/:id/restore` |
 | Rooms | `GET/POST /api/rooms` (`?archived=true` for the archive), `PATCH/DELETE /api/rooms/:id`, `POST /api/rooms/:id/restore` |
-| Bookings | `GET/POST /api/bookings`, `PATCH/DELETE /api/bookings/:id` |
+| Bookings | `GET/POST /api/bookings`, `PATCH/DELETE /api/bookings/:id`, `POST /api/bookings/:id/anonymize` |
 | Events | `GET/POST /api/events`, `PATCH/DELETE /api/events/:id` |
 | Calendar and dashboard | `GET /api/calendar`, `GET /api/dashboard/summary?today=YYYY-MM-DD` |
+| Account | `GET/PUT /api/account/privacy` (data controller details) |
 | Widget (public) | `GET /api/widget/properties/:propertyId`, `POST /api/widget/bookings`, `POST /api/widget/bookings/:id/cancel` |
 
 Widget bookings are always created as `pending`, and the total price is computed server-side.
@@ -272,7 +277,7 @@ Widget bookings are always created as `pending`, and the total price is computed
 
 ```
 client/      React frontend (pages, components, widget.js)
-server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, env.ts, turnstile.ts, log-error.ts, claim-legacy.ts, app.ts, index.ts
+server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, env.ts, turnstile.ts, log-error.ts, claim-legacy.ts, retention.ts, app.ts, index.ts
 shared/      Drizzle schema and shared Zod schemas
 tests/       API integration tests (node:test)
 migrations/  Migrations generated by Drizzle Kit
@@ -285,7 +290,6 @@ To be fixed. Ordered by severity.
 **Quality and maintenance**
 
 1. **No frontend tests:** the tests cover the API, not the UI.
-2. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
 
 ### Upgrading from a version without accounts
 
