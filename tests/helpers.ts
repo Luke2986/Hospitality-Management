@@ -8,8 +8,9 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { pool } from "../server/db";
 import { createApp } from "../server/app";
 
-// Request logs and unsent-email notices would bury the test report.
-mock.method(console, "log", () => {});
+// Request logs and unsent-email notices would bury the test report. Without RESEND_API_KEY emails are logged,
+// which is how the tests read them.
+const consoleLog = mock.method(console, "log", () => {});
 
 let server: Server;
 export let baseUrl = "";
@@ -23,6 +24,7 @@ before(async () => {
 });
 
 beforeEach(async () => {
+  consoleLog.mock.resetCalls();
   await pool.query(
     "TRUNCATE users, properties, rooms, bookings, events, auth_tokens, rate_limits RESTART IDENTITY CASCADE",
   );
@@ -115,4 +117,26 @@ export function guestBooking(roomId: string, overrides: Record<string, unknown> 
     guestsCount: 2,
     ...overrides,
   };
+}
+
+export type SentEmail = { to: string; subject: string; text: string };
+
+export function clearEmails() {
+  consoleLog.mock.resetCalls();
+}
+
+export function sentEmails(): SentEmail[] {
+  return consoleLog.mock.calls.flatMap((call) => {
+    const match = String(call.arguments[0]).match(/Email not sent \(RESEND_API_KEY missing\)\. To: (\S+) \| ([^\n]+)\n([\s\S]*)/);
+    return match ? [{ to: match[1], subject: match[2], text: match[3] }] : [];
+  });
+}
+
+// Emails go out in the background, after the response.
+export async function waitForEmails(count: number) {
+  for (let i = 0; i < 100 && sentEmails().length < count; i++) {
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  await new Promise((r) => setTimeout(r, 100));
+  return sentEmails();
 }

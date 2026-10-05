@@ -9,8 +9,7 @@ import { z } from "zod";
 import { fromError } from "zod-validation-error";
 import { pool } from "./db";
 import { storage } from "./storage";
-import { log } from "./vite";
-import { assertEmailConfig, sendPasswordResetEmail, sendVerificationEmail } from "./email";
+import { assertEmailConfig, sendInBackground, sendPasswordResetEmail, sendVerificationEmail } from "./email";
 import type { AuthTokenType, User } from "@shared/schema";
 
 const scryptAsync = promisify(scrypt) as (password: string, salt: string, keylen: number) => Promise<Buffer>;
@@ -58,10 +57,6 @@ async function issueToken(userId: string, type: AuthTokenType) {
   return token;
 }
 
-// Fire-and-forget so response time doesn't reveal whether the email exists.
-function sendInBackground(task: () => Promise<void>) {
-  task().catch((err) => log(`Email delivery failed: ${err instanceof Error ? err.message : err}`, "email"));
-}
 
 async function sendVerification(user: User) {
   const token = await issueToken(user.id, "verify_email");

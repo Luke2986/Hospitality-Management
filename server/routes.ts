@@ -5,12 +5,15 @@ import { storage } from "./storage";
 import { setupAuth, requireAuth, rateLimit } from "./auth";
 import { turnstileSiteKey, verifyTurnstile } from "./turnstile";
 import { logError } from "./log-error";
+import { sendBookingReceivedEmail, sendBookingStatusEmail, sendInBackground, sendOwnerBookingEmail } from "./email";
 import {
   insertPropertySchema,
   insertRoomSchema,
   insertBookingSchema,
   insertEventSchema,
   bookingStatusSchema,
+  type Booking,
+  type Property,
   type Room,
 } from "@shared/schema";
 import { fromError } from "zod-validation-error";
@@ -72,6 +75,18 @@ function priceBooking(room: Room, checkIn: string, checkOut: string, guestsCount
 async function ownsProperty(propertyId: string, userId: string) {
   const property = await storage.getProperty(propertyId);
   return property?.ownerId === userId;
+}
+
+async function ownerEmail(property: Property) {
+  const owner = await storage.getUser(property.ownerId);
+  if (!owner) throw new Error(`Owner of property ${property.id} not found`);
+  return owner.email;
+}
+
+async function notifyGuestOfStatus(booking: Booking) {
+  const [room, property] = await Promise.all([storage.getRoom(booking.roomId), storage.getProperty(booking.propertyId)]);
+  if (!room || !property) return;
+  await sendBookingStatusEmail({ booking, property, room }, await ownerEmail(property));
 }
 
 async function isBookableRoom(room: Room) {
@@ -181,6 +196,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "pending",
       });
       if (!booking) return res.status(409).json({ error: ROOM_UNAVAILABLE });
+      // The owner booking from their own calendar doesn't need to be told about it.
+      if (req.user?.id !== property.ownerId) {
+        sendInBackground(async () => {
+          const email = await ownerEmail(property);
+          await sendBookingReceivedEmail({ booking, property, room }, email);
+          await sendOwnerBookingEmail({ booking, property, room }, email, "new");
+        });
+      }
       res.status(201).json({
         id: booking.id,
         status: booking.status,
@@ -200,7 +223,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!booking || booking.status !== "pending") {
         return res.status(404).json({ error: "Booking not found" });
       }
-      await storage.updateBooking(booking.id, { status: "cancelled" });
+      const cancelled = await storage.updateBooking(booking.id, { status: "cancelled" });
+      sendInBackground(async () => {
+        const [room, property] = await Promise.all([storage.getRoom(booking.roomId), storage.getProperty(booking.propertyId)]);
+        if (!room || !property || !cancelled) return;
+        await sendOwnerBookingEmail({ booking: cancelled, property, room }, await ownerEmail(property), "cancelled");
+      });
       res.json({ id: booking.id, status: "cancelled" });
     } catch (error: any) {
       sendError(res, error);
@@ -373,6 +401,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = updateBookingSchema.parse(req.body);
       const updated = await storage.updateBookingIfAvailable(req.params.id, data);
       if (!updated) return res.status(409).json({ error: ROOM_UNAVAILABLE });
+      if (updated.status !== booking.status && updated.status !== "pending") {
+        sendInBackground(() => notifyGuestOfStatus(updated));
+      }
       res.json(updated);
     } catch (error: any) {
       sendError(res, error);

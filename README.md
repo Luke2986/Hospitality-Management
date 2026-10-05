@@ -16,6 +16,7 @@ Gestionale web per piccole strutture ricettive (B&B, agriturismi, case vacanza).
 - **Dashboard** (`/dashboard`, richiede login): gestione di strutture, camere, prenotazioni ed eventi locali, calendario e impostazioni.
 - **Calendario di prenotazione** (`/dashboard/calendario`): doppio mese con selezione del periodo, eventi locali filtrabili per categoria, camere disponibili con prezzo calcolato (notti × tariffa) e modal di prenotazione.
 - **Widget incorporabile** (`/widget/:propertyId`): la stessa esperienza del calendario, caricata in un iframe che si ridimensiona da solo tramite `client/public/widget.js`. Le impostazioni generano il codice di incorporamento.
+- **Notifiche email**: l'ospite riceve un'email quando invia una richiesta dal widget e quando viene confermata o annullata; il proprietario riceve ogni nuova richiesta e ogni annullamento da parte dell'ospite. Rispondendo all'email si scrive direttamente all'altra parte.
 - **Archivio**: strutture e camere non si cancellano ma si archiviano. Spariscono da dashboard e widget, le loro prenotazioni restano, e si ripristinano dalla sezione Archivio. Se ci sono prenotazioni future attive viene chiesta conferma.
 - **Eventi locali**: categorie `sagra`, `concerto`, `fiera`, `sport`, `religioso`, `cultura`, `mercato`, `altro`.
 
@@ -53,7 +54,7 @@ Il server e `npm run db:push` leggono il file `.env` nella cartella del progetto
 |---|---|---|
 | `DATABASE_URL` | sì | Stringa di connessione PostgreSQL. Il TLS segue `sslmode`: con `?sslmode=require` (es. Neon) il certificato viene verificato; con un'autorità propria usa `?sslmode=verify-full&sslrootcert=/percorso/ca.crt` (es. Supabase); senza `sslmode` niente TLS, adatto solo a un database locale |
 | `SESSION_SECRET` | sì in produzione | Chiave per firmare il cookie di sessione. In sviluppo, se manca, ne viene generata una casuale a ogni avvio |
-| `RESEND_API_KEY` | sì in produzione | Chiave API di [Resend](https://resend.com) per inviare le email di conferma e recupero password. In sviluppo, se manca, il contenuto delle email viene stampato nel log del server |
+| `RESEND_API_KEY` | sì in produzione | Chiave API di [Resend](https://resend.com) per inviare le email di conferma account, recupero password e prenotazioni. In sviluppo, se manca, il contenuto delle email viene stampato nel log del server |
 | `EMAIL_FROM` | sì in produzione | Mittente delle email, es. `Hospitality Manager <noreply@tuodominio.it>` (dominio verificato su Resend) |
 | `APP_URL` | sì in produzione | URL pubblico dell'app, usato per i link nelle email (es. `https://gestionale.tuodominio.it`) |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | no | Chiavi di [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) (gratuito) per la verifica anti-bot sulle prenotazioni del widget. Vanno impostate entrambe o nessuna; senza chiavi resta attivo solo il campo trappola nascosto |
@@ -117,9 +118,8 @@ Elenco da risolvere. Ordinato per gravità.
 
 **Qualità e manutenzione**
 
-1. **Nessuna notifica email per le prenotazioni**, né all'ospite né al proprietario.
-2. **Nessun test sul frontend:** i test coprono le API, non l'interfaccia.
-3. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
+1. **Nessun test sul frontend:** i test coprono le API, non l'interfaccia.
+2. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
 
 ### Aggiornare da una versione senza account
 
@@ -182,6 +182,7 @@ Web-based management system for small hospitality businesses (B&Bs, farm stays, 
 - **Dashboard** (`/dashboard`, login required): manage properties, rooms, bookings and local events, plus calendar and settings.
 - **Booking calendar** (`/dashboard/calendario`): dual-month date-range picker, local events filterable by category, available rooms with computed price (nights × rate), and a booking modal.
 - **Embeddable widget** (`/widget/:propertyId`): the same calendar experience loaded in an iframe that auto-resizes through `client/public/widget.js`. The settings page generates the embed code.
+- **Email notifications**: guests get an email when they send a request from the widget and when it is confirmed or cancelled; owners get every new request and every guest cancellation. Replying to an email writes directly to the other party.
 - **Archive**: properties and rooms are archived instead of deleted. They disappear from the dashboard and widget, their bookings are kept, and they can be restored from the Archive section. Archiving asks for confirmation when there are upcoming active bookings.
 - **Local events**: categories `sagra`, `concerto`, `fiera`, `sport`, `religioso`, `cultura`, `mercato`, `altro`.
 
@@ -219,7 +220,7 @@ The server and `npm run db:push` read the `.env` file in the project folder (see
 |---|---|---|
 | `DATABASE_URL` | yes | PostgreSQL connection string. TLS follows `sslmode`: with `?sslmode=require` (e.g. Neon) the certificate is verified; for a private CA use `?sslmode=verify-full&sslrootcert=/path/ca.crt` (e.g. Supabase); without `sslmode` there is no TLS, which is only fine for a local database |
 | `SESSION_SECRET` | yes in production | Key used to sign the session cookie. In development a random one is generated on each start if missing |
-| `RESEND_API_KEY` | yes in production | [Resend](https://resend.com) API key used to send confirmation and password reset emails. In development, if missing, email contents are printed to the server log |
+| `RESEND_API_KEY` | yes in production | [Resend](https://resend.com) API key used to send account confirmation, password reset and booking emails. In development, if missing, email contents are printed to the server log |
 | `EMAIL_FROM` | yes in production | Email sender, e.g. `Hospitality Manager <noreply@yourdomain.com>` (domain verified on Resend) |
 | `APP_URL` | yes in production | Public URL of the app, used for links in emails (e.g. `https://app.yourdomain.com`) |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | no | [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) keys (free) for bot protection on widget bookings. Set both or neither; without them only the hidden honeypot field is active |
@@ -283,9 +284,8 @@ To be fixed. Ordered by severity.
 
 **Quality and maintenance**
 
-1. **No booking email notifications** to the guest or owner.
-2. **No frontend tests:** the tests cover the API, not the UI.
-3. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
+1. **No frontend tests:** the tests cover the API, not the UI.
+2. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
 
 ### Upgrading from a version without accounts
 
