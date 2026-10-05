@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertEventSchema, type InsertEvent, type Event, type Property } from "@shared/schema";
 import { Plus, Calendar, Trash2, Edit, MapPin } from "lucide-react";
 import { useState } from "react";
+import { fetchPage, PaginationControls, type PageResult } from "@/components/pagination";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 
@@ -31,9 +32,13 @@ export default function Events() {
   const [open, setOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
 
-  const { data: events, isLoading: eventsLoading } = useQuery<Event[]>({
-    queryKey: ["/api/events"],
+  const [page, setPage] = useState(0);
+  const { data, isLoading: eventsLoading } = useQuery<PageResult<Event>>({
+    queryKey: ["/api/events", page],
+    queryFn: () => fetchPage<Event>("/api/events", new URLSearchParams(), page),
+    placeholderData: keepPreviousData,
   });
+  const events = data?.items;
 
   const { data: properties } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
@@ -382,6 +387,8 @@ export default function Events() {
           ))}
         </div>
       )}
+
+      <PaginationControls page={page} total={data?.total ?? 0} onPageChange={setPage} />
     </div>
   );
 }

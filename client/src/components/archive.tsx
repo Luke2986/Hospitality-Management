@@ -26,7 +26,7 @@ const labels: Record<Resource, { archived: string; restored: string; title: stri
 export const archivedQueryKey = (resource: Resource) => [`/api/${resource}`, "archived"];
 
 function invalidateAll() {
-  for (const key of ["/api/properties", "/api/rooms", "/api/events", "/api/bookings"]) {
+  for (const key of ["/api/properties", "/api/rooms", "/api/events", "/api/bookings", "/api/calendar"]) {
     queryClient.invalidateQueries({ queryKey: [key] });
   }
 }

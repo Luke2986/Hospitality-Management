@@ -2,70 +2,57 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, CheckCircle, Clock, DollarSign } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { apiRequest } from "@/lib/queryClient";
 import type { Booking, Event } from "@shared/schema";
 
+type DashboardSummary = {
+  bookingsThisMonth: number;
+  pendingBookings: number;
+  confirmedBookings: number;
+  revenueThisMonth: string;
+  upcomingCheckIns: Booking[];
+  upcomingEvents: Event[];
+};
+
 export default function DashboardHome() {
-  const { data: bookings, isLoading: bookingsLoading } = useQuery<Booking[]>({
-    queryKey: ["/api/bookings"],
+  const today = format(new Date(), "yyyy-MM-dd");
+  const { data: summary, isLoading } = useQuery<DashboardSummary>({
+    queryKey: ["/api/dashboard/summary", today],
+    queryFn: async () => (await apiRequest("GET", `/api/dashboard/summary?today=${today}`)).json(),
+    staleTime: 0,
   });
 
-  const { data: events, isLoading: eventsLoading } = useQuery<Event[]>({
-    queryKey: ["/api/events"],
-  });
-
-  const now = new Date();
-  const thisMonth = bookings?.filter(b => {
-    const created = new Date(b.createdAt);
-    return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
-  }) || [];
-
-  const pendingBookings = bookings?.filter(b => b.status === "pending") || [];
-  const confirmedBookings = bookings?.filter(b => b.status === "confirmed") || [];
-  
-  const totalRevenue = thisMonth.reduce((sum, b) => sum + parseFloat(String(b.totalPrice)), 0);
-
-  const upcomingEvents = events?.filter(e => {
-    const eventDate = parseISO(e.eventDate);
-    const sevenDaysFromNow = new Date();
-    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-    return eventDate >= now && eventDate <= sevenDaysFromNow;
-  }) || [];
-
-  const upcomingCheckIns = confirmedBookings.filter(b => {
-    const checkIn = parseISO(b.checkIn);
-    const threeDaysFromNow = new Date();
-    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
-    return checkIn >= now && checkIn <= threeDaysFromNow;
-  }).sort((a, b) => parseISO(a.checkIn).getTime() - parseISO(b.checkIn).getTime());
+  const upcomingCheckIns = summary?.upcomingCheckIns ?? [];
+  const upcomingEvents = summary?.upcomingEvents ?? [];
 
   const stats = [
     {
       title: "Prenotazioni Questo Mese",
-      value: thisMonth.length,
+      value: summary?.bookingsThisMonth ?? 0,
       icon: Calendar,
       color: "text-primary",
     },
     {
       title: "Prenotazioni In Attesa",
-      value: pendingBookings.length,
+      value: summary?.pendingBookings ?? 0,
       icon: Clock,
       color: "text-warning",
     },
     {
       title: "Prenotazioni Confermate",
-      value: confirmedBookings.length,
+      value: summary?.confirmedBookings ?? 0,
       icon: CheckCircle,
       color: "text-success",
     },
     {
       title: "Ricavi Questo Mese",
-      value: `€${totalRevenue.toFixed(2)}`,
+      value: `€${summary?.revenueThisMonth ?? "0.00"}`,
       icon: DollarSign,
       color: "text-accent",
     },
   ];
 
-  if (bookingsLoading || eventsLoading) {
+  if (isLoading) {
     return (
       <div className="p-8">
         <div className="animate-pulse space-y-4">
@@ -116,7 +103,7 @@ export default function DashboardHome() {
               <p className="text-sm text-muted-foreground">Nessun check-in in programma</p>
             ) : (
               <div className="space-y-4">
-                {upcomingCheckIns.slice(0, 5).map((booking) => (
+                {upcomingCheckIns.map((booking) => (
                   <div key={booking.id} className="flex items-center justify-between" data-testid={`booking-${booking.id}`}>
                     <div>
                       <p className="text-sm font-medium">{booking.guestName}</p>
@@ -144,7 +131,7 @@ export default function DashboardHome() {
               <p className="text-sm text-muted-foreground">Nessun evento in programma</p>
             ) : (
               <div className="space-y-4">
-                {upcomingEvents.slice(0, 5).map((event) => (
+                {upcomingEvents.map((event) => (
                   <div key={event.id} className="flex items-center justify-between" data-testid={`event-${event.id}`}>
                     <div>
                       <p className="text-sm font-medium">{event.title}</p>

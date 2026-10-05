@@ -56,6 +56,7 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights, tur
       if (error?.status === 409) {
         queryClient.invalidateQueries({ queryKey: ['/api/widget/properties'] });
         queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/calendar'] });
       }
       toast({
         title: "Errore",
@@ -74,6 +75,7 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights, tur
       setIsCancelled(true);
       setShowCancelConfirm(false);
       queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/calendar'] });
     },
     onError: (error: any) => {
       toast({
@@ -89,6 +91,7 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights, tur
   const handleClose = () => {
     if (bookingId) {
       queryClient.invalidateQueries({ queryKey: ['/api/bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/calendar'] });
       queryClient.invalidateQueries({ queryKey: ['/api/widget/properties'] });
     }
     onClose();

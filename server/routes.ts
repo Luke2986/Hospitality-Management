@@ -95,6 +95,22 @@ async function upcomingBookingsConflict(req: Request, res: Response, filter: { p
 
 const wantsArchived = (req: Request) => req.query.archived === "true";
 
+const pageSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
+// Yesterday in UTC, so no time zone can miss a stay or event that is still in progress.
+const yesterdayUtc = () => new Date(Date.now() - DAY_MS).toISOString().slice(0, 10);
+
+const sortByDate = <T extends { eventDate: string }>(events: T[]) =>
+  [...events].sort((a, b) => a.eventDate.localeCompare(b.eventDate));
+
+function queryString(req: Request, key: string) {
+  return typeof req.query[key] === "string" ? (req.query[key] as string) : undefined;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
@@ -121,20 +137,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allRooms = await storage.getRooms({ propertyId });
       const rooms = allRooms.filter((room) => room.isAvailable);
 
-      const events = await storage.getEvents({ propertyId });
-      const sortedEvents = [...events].sort(
-        (a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime(),
-      );
-
-      // Yesterday in UTC, so no time zone can miss a stay that is still in progress.
-      const fromDate = new Date(Date.now() - DAY_MS).toISOString().slice(0, 10);
-      const bookedRanges = await storage.getBookedRanges(propertyId, fromDate);
+      const fromDate = yesterdayUtc();
+      const events = sortByDate(await storage.getEvents({ propertyId, from: fromDate }));
+      const bookedRanges = await storage.getBookedRanges({ propertyId }, fromDate);
 
       const { ownerId: _ownerId, ...publicProperty } = property;
       res.json({
         property: publicProperty,
         rooms,
-        events: sortedEvents,
+        events,
         bookedRanges,
         turnstileSiteKey: turnstileSiteKey(),
       });
@@ -319,18 +330,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Bookings
   app.get("/api/bookings", async (req: Request, res: Response) => {
     try {
-      const q = (key: string) => (typeof req.query[key] === "string" ? (req.query[key] as string) : undefined);
-      res.json(
-        await storage.getBookings({
-          ownerId: req.user!.id,
-          propertyId: q("propertyId"),
-          roomId: q("roomId"),
-          status: q("status"),
-          guestName: q("guestName"),
-          checkInFrom: q("checkInFrom"),
-          checkInTo: q("checkInTo"),
-        }),
-      );
+      const q = (key: string) => queryString(req, key);
+      const filters = {
+        ownerId: req.user!.id,
+        propertyId: q("propertyId"),
+        roomId: q("roomId"),
+        status: q("status"),
+        guestName: q("guestName"),
+        checkInFrom: q("checkInFrom"),
+        checkInTo: q("checkInTo"),
+      };
+      const page = pageSchema.parse(req.query);
+      const [items, total] = await Promise.all([storage.getBookings(filters, page), storage.countBookings(filters)]);
+      res.set("X-Total-Count", String(total)).json(items);
     } catch (error: any) {
       sendError(res, error);
     }
@@ -380,14 +392,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Owner's booking calendar: same shape as the widget data, across all active properties.
+  app.get("/api/calendar", async (req: Request, res: Response) => {
+    try {
+      const ownerId = req.user!.id;
+      const fromDate = yesterdayUtc();
+      const [rooms, events, bookedRanges] = await Promise.all([
+        storage.getRooms({ ownerId }),
+        storage.getEvents({ ownerId, from: fromDate }),
+        storage.getBookedRanges({ ownerId }, fromDate),
+      ]);
+      res.json({ rooms, events: sortByDate(events), bookedRanges });
+    } catch (error: any) {
+      sendError(res, error);
+    }
+  });
+
+  // `today` is the owner's local date, so "this month" and "next 3 days" match their calendar.
+  app.get("/api/dashboard/summary", async (req: Request, res: Response) => {
+    try {
+      const today = dateSchema.safeParse(req.query.today).data ?? new Date().toISOString().slice(0, 10);
+      res.json(await storage.getDashboardSummary(req.user!.id, today));
+    } catch (error: any) {
+      sendError(res, error);
+    }
+  });
+
   // Events
   app.get("/api/events", async (req: Request, res: Response) => {
     try {
-      const propertyId = typeof req.query.propertyId === "string" ? req.query.propertyId : undefined;
-      const events = await storage.getEvents({ propertyId, ownerId: req.user!.id });
-      res.json(
-        [...events].sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime()),
-      );
+      const filters = { propertyId: queryString(req, "propertyId"), ownerId: req.user!.id };
+      const page = pageSchema.parse(req.query);
+      const [items, total] = await Promise.all([storage.getEvents(filters, page), storage.countEvents(filters)]);
+      res.set("X-Total-Count", String(total)).json(items);
     } catch (error: any) {
       sendError(res, error);
     }

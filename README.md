@@ -92,9 +92,12 @@ Tutte le rotte sono sotto `/api` e restituiscono JSON. Le rotte del widget e di 
 | Camere | `GET/POST /api/rooms` (`?archived=true` per l'archivio), `PATCH/DELETE /api/rooms/:id`, `POST /api/rooms/:id/restore` |
 | Prenotazioni | `GET/POST /api/bookings`, `PATCH/DELETE /api/bookings/:id` |
 | Eventi | `GET/POST /api/events`, `PATCH/DELETE /api/events/:id` |
+| Calendario e dashboard | `GET /api/calendar`, `GET /api/dashboard/summary?today=AAAA-MM-GG` |
 | Widget (pubblico) | `GET /api/widget/properties/:propertyId`, `POST /api/widget/bookings`, `POST /api/widget/bookings/:id/cancel` |
 
 Le prenotazioni dal widget nascono sempre `pending` e il prezzo totale è calcolato dal server.
+
+`GET /api/bookings` e `GET /api/events` sono paginate: `limit` (default 25, massimo 100) e `offset`; il totale è nell'header `X-Total-Count`. Le camere non sono paginate. Calendario e widget ricevono solo i soggiorni e gli eventi non ancora conclusi; la dashboard riceve i totali già calcolati.
 
 `DELETE` su strutture e camere archivia invece di cancellare. Se ci sono prenotazioni future non cancellate risponde `409` con `code: "HAS_UPCOMING_BOOKINGS"` e `upcomingBookings`; per archiviare comunque si ripete la richiesta con `?confirm=true`.
 
@@ -114,10 +117,9 @@ Elenco da risolvere. Ordinato per gravità.
 
 **Qualità e manutenzione**
 
-1. **Nessuna paginazione** su liste di camere, prenotazioni ed eventi.
-2. **Nessuna notifica email per le prenotazioni**, né all'ospite né al proprietario.
-3. **Nessun test sul frontend:** i test coprono le API, non l'interfaccia.
-4. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
+1. **Nessuna notifica email per le prenotazioni**, né all'ospite né al proprietario.
+2. **Nessun test sul frontend:** i test coprono le API, non l'interfaccia.
+3. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
 
 ### Aggiornare da una versione senza account
 
@@ -256,9 +258,12 @@ All routes live under `/api` and return JSON. Widget and auth routes are public;
 | Rooms | `GET/POST /api/rooms` (`?archived=true` for the archive), `PATCH/DELETE /api/rooms/:id`, `POST /api/rooms/:id/restore` |
 | Bookings | `GET/POST /api/bookings`, `PATCH/DELETE /api/bookings/:id` |
 | Events | `GET/POST /api/events`, `PATCH/DELETE /api/events/:id` |
+| Calendar and dashboard | `GET /api/calendar`, `GET /api/dashboard/summary?today=YYYY-MM-DD` |
 | Widget (public) | `GET /api/widget/properties/:propertyId`, `POST /api/widget/bookings`, `POST /api/widget/bookings/:id/cancel` |
 
 Widget bookings are always created as `pending`, and the total price is computed server-side.
+
+`GET /api/bookings` and `GET /api/events` are paginated: `limit` (default 25, max 100) and `offset`; the total is in the `X-Total-Count` header. Rooms are not paginated. The calendar and widget only receive stays and events that haven't ended yet; the dashboard receives precomputed totals.
 
 `DELETE` on properties and rooms archives instead of deleting. With upcoming non-cancelled bookings it returns `409` with `code: "HAS_UPCOMING_BOOKINGS"` and `upcomingBookings`; repeat the request with `?confirm=true` to archive anyway.
 
@@ -278,10 +283,9 @@ To be fixed. Ordered by severity.
 
 **Quality and maintenance**
 
-1. **No pagination** on room, booking and event lists.
-2. **No booking email notifications** to the guest or owner.
-3. **No frontend tests:** the tests cover the API, not the UI.
-4. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
+1. **No booking email notifications** to the guest or owner.
+2. **No frontend tests:** the tests cover the API, not the UI.
+3. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
 
 ### Upgrading from a version without accounts
 

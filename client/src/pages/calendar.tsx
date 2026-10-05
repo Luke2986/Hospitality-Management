@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Booking, Event, Room } from '@shared/schema';
-import { availableRooms } from '@/lib/availability';
+import type { Event, Room } from '@shared/schema';
+import { availableRooms, type BookedRange } from '@/lib/availability';
 import { Calendar } from '@/components/calendar/Calendar';
 import { EventsSidebar } from '@/components/calendar/EventsSidebar';
 import { RoomsGrid } from '@/components/calendar/RoomsGrid';
@@ -11,25 +11,17 @@ export default function CalendarPage() {
   const [selectedDates, setSelectedDates] = useState<{ from?: Date; to?: Date }>({});
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  const { data: events = [], isLoading: eventsLoading } = useQuery<Event[]>({
-    queryKey: ['/api/events'],
+  const { data, isLoading } = useQuery<{ rooms: Room[]; events: Event[]; bookedRanges: BookedRange[] }>({
+    queryKey: ['/api/calendar'],
+    staleTime: 0,
   });
-
-  const { data: rooms = [], isLoading: roomsLoading } = useQuery<Room[]>({
-    queryKey: ['/api/rooms'],
-  });
-
-  const { data: bookings = [], isLoading: bookingsLoading } = useQuery<Booking[]>({
-    queryKey: ['/api/bookings'],
-  });
-
-  const isLoading = eventsLoading || roomsLoading || bookingsLoading;
+  const events = data?.events ?? [];
 
   const freeRooms =
-    selectedDates.from && selectedDates.to
+    data && selectedDates.from && selectedDates.to
       ? availableRooms(
-          rooms.filter((room) => room.isAvailable),
-          bookings.filter((b) => b.status !== 'cancelled'),
+          data.rooms.filter((room) => room.isAvailable),
+          data.bookedRanges,
           selectedDates.from,
           selectedDates.to,
         )

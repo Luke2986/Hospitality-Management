@@ -1,4 +1,4 @@
-import { eq, ne, desc, and, sql, inArray, isNull, isNotNull, gt, gte, lt, type SQL } from "drizzle-orm";
+import { eq, ne, asc, desc, and, sql, inArray, isNull, isNotNull, gt, gte, lt, lte, type SQL } from "drizzle-orm";
 import { db } from "./db";
 import { 
   users, 
@@ -22,6 +22,29 @@ import {
 } from "@shared/schema";
 
 export type BookedRange = { roomId: string; checkIn: string; checkOut: string };
+export type Page = { limit: number; offset: number };
+
+export type BookingFilters = {
+  ownerId?: string;
+  propertyId?: string;
+  roomId?: string;
+  status?: string;
+  guestName?: string;
+  checkInFrom?: string;
+  checkInTo?: string;
+};
+
+// `from` keeps events still running on that day (end date on or after it).
+export type EventFilters = { propertyId?: string; ownerId?: string; from?: string };
+
+export type DashboardSummary = {
+  bookingsThisMonth: number;
+  pendingBookings: number;
+  confirmedBookings: number;
+  revenueThisMonth: string;
+  upcomingCheckIns: Booking[];
+  upcomingEvents: Event[];
+};
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -70,25 +93,20 @@ export interface IStorage {
   setRoomArchived(id: string, archived: boolean): Promise<Room | undefined>;
 
   // Bookings
-  getBookings(filters?: {
-    ownerId?: string;
-    propertyId?: string;
-    roomId?: string;
-    status?: string;
-    guestName?: string;
-    checkInFrom?: string;
-    checkInTo?: string;
-  }): Promise<Booking[]>;
+  getBookings(filters: BookingFilters, page?: Page): Promise<Booking[]>;
+  countBookings(filters: BookingFilters): Promise<number>;
   getBooking(id: string): Promise<Booking | undefined>;
   createBookingIfAvailable(booking: InsertBooking & { propertyId: string }): Promise<Booking | null>;
   updateBookingIfAvailable(id: string, data: Partial<InsertBooking>): Promise<Booking | null>;
-  getBookedRanges(propertyId: string, fromDate: string): Promise<BookedRange[]>;
+  getBookedRanges(filter: { propertyId?: string; ownerId?: string }, fromDate: string): Promise<BookedRange[]>;
+  getDashboardSummary(ownerId: string, today: string): Promise<DashboardSummary>;
   countUpcomingBookings(filter: { propertyId?: string; roomId?: string }, today: string): Promise<number>;
   updateBooking(id: string, data: Partial<InsertBooking>): Promise<Booking | undefined>;
   deleteBooking(id: string): Promise<void>;
 
   // Events
-  getEvents(filters?: { propertyId?: string; ownerId?: string }): Promise<Event[]>;
+  getEvents(filters: EventFilters, page?: Page): Promise<Event[]>;
+  countEvents(filters: EventFilters): Promise<number>;
   getEvent(id: string): Promise<Event | undefined>;
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: string, data: Partial<InsertEvent>): Promise<Event | undefined>;
@@ -103,6 +121,26 @@ function activePropertyIds(ownerId?: string) {
   const conditions: SQL[] = [isNull(properties.archivedAt)];
   if (ownerId) conditions.push(eq(properties.ownerId, ownerId));
   return db.select({ id: properties.id }).from(properties).where(and(...conditions));
+}
+
+function bookingConditions(filters: BookingFilters) {
+  const conditions: SQL[] = [];
+  if (filters.ownerId) conditions.push(inArray(bookings.propertyId, ownedPropertyIds(filters.ownerId)));
+  if (filters.propertyId) conditions.push(eq(bookings.propertyId, filters.propertyId));
+  if (filters.roomId) conditions.push(eq(bookings.roomId, filters.roomId));
+  if (filters.status) conditions.push(eq(bookings.status, filters.status));
+  if (filters.guestName) conditions.push(sql`${bookings.guestName} ILIKE ${`%${filters.guestName}%`}`);
+  if (filters.checkInFrom) conditions.push(gte(bookings.checkIn, filters.checkInFrom));
+  if (filters.checkInTo) conditions.push(lte(bookings.checkIn, filters.checkInTo));
+  return and(...conditions);
+}
+
+function eventConditions(filters: EventFilters) {
+  const conditions: SQL[] = [];
+  if (filters.propertyId) conditions.push(eq(events.propertyId, filters.propertyId));
+  if (filters.ownerId) conditions.push(inArray(events.propertyId, activePropertyIds(filters.ownerId)));
+  if (filters.from) conditions.push(sql`coalesce(${events.endDate}, ${events.eventDate}) >= ${filters.from}`);
+  return and(...conditions);
 }
 
 export class DatabaseStorage implements IStorage {
@@ -234,43 +272,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Bookings
-  async getBookings(filters?: {
-    ownerId?: string;
-    propertyId?: string;
-    roomId?: string;
-    status?: string;
-    guestName?: string;
-    checkInFrom?: string;
-    checkInTo?: string;
-  }): Promise<Booking[]> {
-    const conditions: SQL[] = [];
+  async getBookings(filters: BookingFilters, page?: Page): Promise<Booking[]> {
+    const query = db.select().from(bookings).where(bookingConditions(filters))
+      .orderBy(desc(bookings.createdAt), desc(bookings.id))
+      .$dynamic();
+    return page ? query.limit(page.limit).offset(page.offset) : query;
+  }
 
-    if (filters?.ownerId) {
-      conditions.push(inArray(bookings.propertyId, ownedPropertyIds(filters.ownerId)));
-    }
-    if (filters?.propertyId) {
-      conditions.push(eq(bookings.propertyId, filters.propertyId));
-    }
-    if (filters?.roomId) {
-      conditions.push(eq(bookings.roomId, filters.roomId));
-    }
-    if (filters?.status) {
-      conditions.push(eq(bookings.status, filters.status));
-    }
-    if (filters?.guestName) {
-      conditions.push(sql`${bookings.guestName} ILIKE ${`%${filters.guestName}%`}`);
-    }
-    if (filters?.checkInFrom) {
-      conditions.push(sql`${bookings.checkIn} >= ${filters.checkInFrom}`);
-    }
-    if (filters?.checkInTo) {
-      conditions.push(sql`${bookings.checkIn} <= ${filters.checkInTo}`);
-    }
-    
-    if (conditions.length > 0) {
-      return db.select().from(bookings).where(and(...conditions)).orderBy(desc(bookings.createdAt));
-    }
-    return db.select().from(bookings).orderBy(desc(bookings.createdAt));
+  async countBookings(filters: BookingFilters): Promise<number> {
+    const [row] = await db.select({ count: sql<number>`count(*)::int` }).from(bookings).where(bookingConditions(filters));
+    return row.count;
   }
 
   async getBooking(id: string): Promise<Booking | undefined> {
@@ -304,14 +315,47 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async getBookedRanges(propertyId: string, fromDate: string): Promise<BookedRange[]> {
+  async getBookedRanges(filter: { propertyId?: string; ownerId?: string }, fromDate: string): Promise<BookedRange[]> {
     return db.select({ roomId: bookings.roomId, checkIn: bookings.checkIn, checkOut: bookings.checkOut })
       .from(bookings)
       .where(and(
-        eq(bookings.propertyId, propertyId),
+        bookingConditions(filter),
         ne(bookings.status, "cancelled"),
         gte(bookings.checkOut, fromDate),
       ));
+  }
+
+  async getDashboardSummary(ownerId: string, today: string): Promise<DashboardSummary> {
+    const owned = bookingConditions({ ownerId });
+    const monthStart = `${today.slice(0, 7)}-01`;
+    const thisMonth = sql`${bookings.createdAt} >= ${monthStart}::date`;
+    const [stats] = await db.select({
+      bookingsThisMonth: sql<number>`(count(*) filter (where ${thisMonth}))::int`,
+      pendingBookings: sql<number>`(count(*) filter (where ${bookings.status} = 'pending'))::int`,
+      confirmedBookings: sql<number>`(count(*) filter (where ${bookings.status} = 'confirmed'))::int`,
+      revenueThisMonth: sql<string>`coalesce(sum(${bookings.totalPrice}) filter (where ${thisMonth} and ${bookings.status} <> 'cancelled'), 0)::numeric(12, 2)::text`,
+    }).from(bookings).where(owned);
+
+    const upcomingCheckIns = await db.select().from(bookings)
+      .where(and(
+        owned,
+        eq(bookings.status, "confirmed"),
+        gte(bookings.checkIn, today),
+        sql`${bookings.checkIn} <= ${today}::date + 3`,
+      ))
+      .orderBy(asc(bookings.checkIn))
+      .limit(5);
+
+    const upcomingEvents = await db.select().from(events)
+      .where(and(
+        eventConditions({ ownerId }),
+        gte(events.eventDate, today),
+        sql`${events.eventDate} <= ${today}::date + 7`,
+      ))
+      .orderBy(asc(events.eventDate))
+      .limit(5);
+
+    return { ...stats, upcomingCheckIns, upcomingEvents };
   }
 
   async countUpcomingBookings(filter: { propertyId?: string; roomId?: string }, today: string): Promise<number> {
@@ -335,11 +379,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Events
-  async getEvents(filters?: { propertyId?: string; ownerId?: string }): Promise<Event[]> {
-    const conditions: SQL[] = [];
-    if (filters?.propertyId) conditions.push(eq(events.propertyId, filters.propertyId));
-    if (filters?.ownerId) conditions.push(inArray(events.propertyId, activePropertyIds(filters.ownerId)));
-    return db.select().from(events).where(and(...conditions)).orderBy(desc(events.eventDate));
+  async getEvents(filters: EventFilters, page?: Page): Promise<Event[]> {
+    const query = db.select().from(events).where(eventConditions(filters))
+      .orderBy(desc(events.eventDate), desc(events.id))
+      .$dynamic();
+    return page ? query.limit(page.limit).offset(page.offset) : query;
+  }
+
+  async countEvents(filters: EventFilters): Promise<number> {
+    const [row] = await db.select({ count: sql<number>`count(*)::int` }).from(events).where(eventConditions(filters));
+    return row.count;
   }
 
   async getEvent(id: string): Promise<Event | undefined> {

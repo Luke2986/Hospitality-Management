@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import type { Booking, Room } from "@shared/schema";
 import { Check, X, Mail, Search, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { fetchPage, PaginationControls, type PageResult } from "@/components/pagination";
 
 export default function Bookings() {
   const { toast } = useToast();
@@ -23,6 +24,12 @@ export default function Bookings() {
     checkInTo: "",
   });
 
+  const [page, setPage] = useState(0);
+  const updateFilters = (next: typeof filters) => {
+    setFilters(next);
+    setPage(0);
+  };
+
   const queryParams = new URLSearchParams();
   if (filters.guestName) queryParams.set("guestName", filters.guestName);
   if (filters.status) queryParams.set("status", filters.status);
@@ -30,17 +37,12 @@ export default function Bookings() {
   if (filters.checkInFrom) queryParams.set("checkInFrom", filters.checkInFrom);
   if (filters.checkInTo) queryParams.set("checkInTo", filters.checkInTo);
 
-  const { data: bookings, isLoading } = useQuery<Booking[]>({
-    queryKey: ["/api/bookings", queryParams.toString()],
-    queryFn: async () => {
-      const url = queryParams.toString() 
-        ? `/api/bookings?${queryParams.toString()}`
-        : "/api/bookings";
-      const response = await fetch(url, { credentials: "include" });
-      if (!response.ok) throw new Error("Failed to fetch bookings");
-      return response.json();
-    },
+  const { data, isLoading } = useQuery<PageResult<Booking>>({
+    queryKey: ["/api/bookings", queryParams.toString(), page],
+    queryFn: () => fetchPage<Booking>("/api/bookings", queryParams, page),
+    placeholderData: keepPreviousData,
   });
+  const bookings = data?.items;
 
   const { data: rooms } = useQuery<Room[]>({
     queryKey: ["/api/rooms"],
@@ -112,7 +114,7 @@ export default function Bookings() {
                   id="guest-search"
                   placeholder="Cerca per nome"
                   value={filters.guestName}
-                  onChange={(e) => setFilters({ ...filters, guestName: e.target.value })}
+                  onChange={(e) => updateFilters({ ...filters, guestName: e.target.value })}
                   className="pl-8"
                   data-testid="input-guest-search"
                 />
@@ -121,7 +123,7 @@ export default function Bookings() {
 
             <div className="space-y-2">
               <Label htmlFor="status-filter">Stato</Label>
-              <Select value={filters.status || "all"} onValueChange={(value) => setFilters({ ...filters, status: value === "all" ? "" : value })}>
+              <Select value={filters.status || "all"} onValueChange={(value) => updateFilters({ ...filters, status: value === "all" ? "" : value })}>
                 <SelectTrigger id="status-filter" data-testid="select-status-filter">
                   <SelectValue placeholder="Tutti gli stati" />
                 </SelectTrigger>
@@ -136,7 +138,7 @@ export default function Bookings() {
 
             <div className="space-y-2">
               <Label htmlFor="room-filter">Camera</Label>
-              <Select value={filters.roomId || "all"} onValueChange={(value) => setFilters({ ...filters, roomId: value === "all" ? "" : value })}>
+              <Select value={filters.roomId || "all"} onValueChange={(value) => updateFilters({ ...filters, roomId: value === "all" ? "" : value })}>
                 <SelectTrigger id="room-filter" data-testid="select-room-filter">
                   <SelectValue placeholder="Tutte le camere" />
                 </SelectTrigger>
@@ -157,7 +159,7 @@ export default function Bookings() {
                 id="checkin-from"
                 type="date"
                 value={filters.checkInFrom}
-                onChange={(e) => setFilters({ ...filters, checkInFrom: e.target.value })}
+                onChange={(e) => updateFilters({ ...filters, checkInFrom: e.target.value })}
                 data-testid="input-checkin-from"
               />
             </div>
@@ -168,7 +170,7 @@ export default function Bookings() {
                 id="checkin-to"
                 type="date"
                 value={filters.checkInTo}
-                onChange={(e) => setFilters({ ...filters, checkInTo: e.target.value })}
+                onChange={(e) => updateFilters({ ...filters, checkInTo: e.target.value })}
                 data-testid="input-checkin-to"
               />
             </div>
@@ -176,7 +178,7 @@ export default function Bookings() {
           {(filters.guestName || filters.status || filters.roomId || filters.checkInFrom || filters.checkInTo) && (
             <Button 
               variant="outline" 
-              onClick={() => setFilters({ guestName: "", status: "", roomId: "", checkInFrom: "", checkInTo: "" })}
+              onClick={() => updateFilters({ guestName: "", status: "", roomId: "", checkInFrom: "", checkInTo: "" })}
               className="mt-4"
               data-testid="button-clear-filters"
             >
@@ -266,6 +268,8 @@ export default function Bookings() {
           </CardContent>
         </Card>
       )}
+
+      <PaginationControls page={page} total={data?.total ?? 0} onPageChange={setPage} />
     </div>
   );
 }
