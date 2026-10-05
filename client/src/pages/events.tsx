@@ -49,8 +49,6 @@ export default function Events() {
       location: "",
       category: "",
       propertyId: "",
-      isAutomatic: false,
-      isRecurring: false,
       status: "confirmed",
     },
   });
@@ -125,8 +123,6 @@ export default function Events() {
       location: event.location || "",
       category: event.category || "",
       propertyId: event.propertyId,
-      isAutomatic: event.isAutomatic,
-      isRecurring: event.isRecurring,
       status: event.status,
     });
     setOpen(true);
@@ -143,8 +139,6 @@ export default function Events() {
       location: "",
       category: "",
       propertyId: firstProperty?.id || "",
-      isAutomatic: false,
-      isRecurring: false,
       status: "confirmed",
     });
     setOpen(true);

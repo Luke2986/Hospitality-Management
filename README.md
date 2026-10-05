@@ -114,11 +114,10 @@ Elenco da risolvere. Ordinato per gravità.
 
 **Qualità e manutenzione**
 
-1. **Funzionalità solo accennate nello schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` negli eventi non sono usate.
-2. **Nessuna paginazione** su liste di camere, prenotazioni ed eventi.
-3. **Nessuna notifica email per le prenotazioni**, né all'ospite né al proprietario.
-4. **Nessun test sul frontend:** i test coprono le API, non l'interfaccia.
-5. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
+1. **Nessuna paginazione** su liste di camere, prenotazioni ed eventi.
+2. **Nessuna notifica email per le prenotazioni**, né all'ospite né al proprietario.
+3. **Nessun test sul frontend:** i test coprono le API, non l'interfaccia.
+4. **GDPR:** dati personali degli ospiti raccolti senza informativa, consenso o politica di conservazione.
 
 ### Aggiornare da una versione senza account
 
@@ -279,11 +278,10 @@ To be fixed. Ordered by severity.
 
 **Quality and maintenance**
 
-1. **Half-built features in the schema:** `isAutomatic`, `isRecurring`, `sourceUrl`, `confidence` on events are unused.
-2. **No pagination** on room, booking and event lists.
-3. **No booking email notifications** to the guest or owner.
-4. **No frontend tests:** the tests cover the API, not the UI.
-5. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
+1. **No pagination** on room, booking and event lists.
+2. **No booking email notifications** to the guest or owner.
+3. **No frontend tests:** the tests cover the API, not the UI.
+4. **GDPR gaps:** guests' personal data is collected with no privacy notice, consent or retention policy.
 
 ### Upgrading from a version without accounts
 
