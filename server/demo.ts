@@ -1,4 +1,4 @@
-import { randomBytes } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import { and, like, lt, sql } from "drizzle-orm";
 import { db } from "./db";
 import { bookings, events, properties, rooms, users, type User } from "@shared/schema";
@@ -95,8 +95,14 @@ const EVENTS: Array<{ property: number; offset: number; days?: number; title: st
   { property: 1, offset: 86, days: 3, title: "Festa del Barbarossa", category: "altro", location: "Centro storico, San Quirico d'Orcia", description: "Corteo storico, tiro con l'arco e banchetti medievali." },
 ];
 
-// Creates a fresh, isolated demo owner with two properties, six rooms, bookings and local events around `today`.
-export async function createDemoAccount(today = new Date()): Promise<User> {
+// UUID derived from the owner's id: rebuilding an account produces the same ids, so links and sessions keep working.
+function stableId(ownerId: string, key: string) {
+  const h = createHash("sha256").update(`hospitality-demo:${ownerId}:${key}`).digest("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
+}
+
+// Creates an isolated demo owner with two properties, six rooms, bookings and local events around `today`.
+export async function createDemoAccount(today = new Date(), ownerId: string = randomUUID()): Promise<User> {
   const random = mulberry32(20261017);
   const pick = <T>(list: T[]) => list[Math.floor(random() * list.length)];
 
@@ -104,7 +110,8 @@ export async function createDemoAccount(today = new Date()): Promise<User> {
     const [owner] = await tx
       .insert(users)
       .values({
-        email: `demo-${randomBytes(8).toString("hex")}@${DEMO_EMAIL_DOMAIN}`,
+        id: ownerId,
+        email: `demo-${ownerId.replace(/-/g, "").slice(0, 16)}@${DEMO_EMAIL_DOMAIN}`,
         fullName: "Giulia Ferri",
         emailVerifiedAt: new Date(),
         privacyControllerName: "Giulia Ferri, titolare del B&B Il Glicine",
@@ -116,7 +123,8 @@ export async function createDemoAccount(today = new Date()): Promise<User> {
     const createdProperties = await tx
       .insert(properties)
       .values(
-        PROPERTIES.map((p) => ({
+        PROPERTIES.map((p, i) => ({
+          id: stableId(ownerId, `property:${i}`),
           ownerId: owner.id,
           name: p.name,
           city: p.city,
@@ -128,7 +136,8 @@ export async function createDemoAccount(today = new Date()): Promise<User> {
       .returning();
 
     const roomValues = PROPERTIES.flatMap((p, i) =>
-      p.rooms.map((r) => ({
+      p.rooms.map((r, j) => ({
+        id: stableId(ownerId, `room:${i}:${j}`),
         propertyId: createdProperties[i].id,
         name: r.name,
         description: r.description,
@@ -157,6 +166,7 @@ export async function createDemoAccount(today = new Date()): Promise<User> {
         if (day > 3 && roll < 0.08) status = "pending";
         else if (roll > 0.9) status = "cancelled";
         bookingValues.push({
+          id: stableId(ownerId, `booking:${bookingValues.length}`),
           roomId: room.id,
           propertyId: room.propertyId,
           guestName,
@@ -176,7 +186,8 @@ export async function createDemoAccount(today = new Date()): Promise<User> {
     await tx.insert(bookings).values(bookingValues);
 
     await tx.insert(events).values(
-      EVENTS.map((e) => ({
+      EVENTS.map((e, i) => ({
+        id: stableId(ownerId, `event:${i}`),
         propertyId: createdProperties[e.property].id,
         title: e.title,
         description: e.description,
@@ -189,6 +200,19 @@ export async function createDemoAccount(today = new Date()): Promise<User> {
 
     return owner;
   });
+}
+
+const rebuilding = new Map<string, Promise<User>>();
+
+// With the in-memory database each serverless instance starts empty: a visitor whose request lands on a new
+// instance gets their demo account rebuilt there, with the same ids. Only called for ids from a signed session.
+export function rebuildDemoAccount(ownerId: string): Promise<User> {
+  let pending = rebuilding.get(ownerId);
+  if (!pending) {
+    pending = createDemoAccount(new Date(), ownerId).finally(() => rebuilding.delete(ownerId));
+    rebuilding.set(ownerId, pending);
+  }
+  return pending;
 }
 
 // Each visitor gets a throwaway account; this removes the ones older than a day, with all their data.

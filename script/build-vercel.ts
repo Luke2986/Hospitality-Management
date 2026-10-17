@@ -27,12 +27,16 @@ async function main() {
     platform: "node",
     target: "node22",
     format: "cjs",
-    external: ["pg-native"],
+    // PGlite loads its .wasm and .data files from its own package folder, so it ships unbundled.
+    external: ["pg-native", "@electric-sql/pglite"],
     footer: { js: "module.exports = module.exports.default;" },
     logLevel: "warning",
   });
   // connect-pg-simple reads it next to its own code to create the session table on first use.
   cpSync("node_modules/connect-pg-simple/table.sql", `${FUNCTION_DIR}/table.sql`);
+  // Without DATABASE_URL the demo runs on an in-memory database and applies the migrations at startup.
+  cpSync("migrations", `${FUNCTION_DIR}/migrations`, { recursive: true });
+  cpSync("node_modules/@electric-sql/pglite", `${FUNCTION_DIR}/node_modules/@electric-sql/pglite`, { recursive: true });
   writeFileSync(
     `${FUNCTION_DIR}/.vc-config.json`,
     JSON.stringify({ runtime: "nodejs22.x", handler: "index.cjs", launcherType: "Nodejs", shouldAddHelpers: false }, null, 2),

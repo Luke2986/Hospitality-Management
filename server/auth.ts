@@ -1,13 +1,15 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
+import cookieSession from "cookie-session";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { createHash, randomBytes, scrypt, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { z } from "zod";
 import { fromError } from "zod-validation-error";
-import { pool } from "./db";
+import { isInMemory, pool } from "./db";
+import { isDemoMode, rebuildDemoAccount } from "./demo";
 import { storage } from "./storage";
 import { assertEmailConfig, sendInBackground, sendPasswordResetEmail, sendVerificationEmail } from "./email";
 import type { AuthTokenType, User } from "@shared/schema";
@@ -124,6 +126,22 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   res.status(401).json({ error: "Autenticazione richiesta" });
 }
 
+// Passport and the logout route call these express-session methods; a cookie session only needs to be cleared.
+function addSessionMethods(req: Request, _res: Response, next: NextFunction) {
+  const methods = {
+    regenerate: (cb: (err?: unknown) => void) => cb(),
+    save: (cb: (err?: unknown) => void) => cb(),
+    destroy: (cb: (err?: unknown) => void) => {
+      req.session = null as any;
+      cb();
+    },
+  };
+  for (const [name, fn] of Object.entries(methods)) {
+    Object.defineProperty(req.session, name, { value: fn, enumerable: false });
+  }
+  next();
+}
+
 export function setupAuth(app: Express) {
   const isProduction = app.get("env") === "production";
 
@@ -137,22 +155,30 @@ export function setupAuth(app: Express) {
   assertEmailConfig();
   if (isProduction) app.set("trust proxy", 1);
 
-  const PgStore = connectPgSimple(session);
-  app.use(
-    session({
-      store: new PgStore({ pool, createTableIfMissing: true }),
-      name: "hm.sid",
-      secret,
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: isProduction,
-        maxAge: 1000 * 60 * 60 * 24 * 7,
-      },
-    }),
-  );
+  if (isInMemory) {
+    // Every serverless instance has its own in-memory database, so the demo session travels in a signed cookie.
+    app.use(
+      cookieSession({ name: "hm.sid", secret, httpOnly: true, sameSite: "lax", secure: isProduction, maxAge: 1000 * 60 * 60 * 24 }),
+    );
+    app.use(addSessionMethods);
+  } else {
+    const PgStore = connectPgSimple(session);
+    app.use(
+      session({
+        store: new PgStore({ pool, createTableIfMissing: true }),
+        name: "hm.sid",
+        secret,
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+          httpOnly: true,
+          sameSite: "lax",
+          secure: isProduction,
+          maxAge: 1000 * 60 * 60 * 24 * 7,
+        },
+      }),
+    );
+  }
   app.use(passport.initialize());
   app.use(passport.session());
 
@@ -176,7 +202,8 @@ export function setupAuth(app: Express) {
   passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id: string, done) => {
     try {
-      const user = await storage.getUser(id);
+      let user = await storage.getUser(id);
+      if (!user && isInMemory && isDemoMode()) user = await rebuildDemoAccount(id);
       done(null, user?.emailVerifiedAt ? toPublicUser(user) : false);
     } catch (err) {
       done(err);

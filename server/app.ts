@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes, INTERNAL_ERROR } from "./routes";
 import { logError } from "./log-error";
 import { log } from "./log";
+import { databaseReady } from "./db";
 
 export async function createApp() {
   const app = express();
@@ -55,6 +56,7 @@ export async function createApp() {
     next();
   });
 
+  await databaseReady;
   const server = await registerRoutes(app);
 
   app.use((err: any, req: Request, res: Response, next: NextFunction) => {

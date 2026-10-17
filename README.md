@@ -53,7 +53,7 @@ Il server e `npm run db:push` leggono il file `.env` nella cartella del progetto
 
 | Variabile | Obbligatoria | Descrizione |
 |---|---|---|
-| `DATABASE_URL` | sì | Stringa di connessione PostgreSQL. Il TLS segue `sslmode`: con `?sslmode=require` (es. Neon) il certificato viene verificato; con un'autorità propria usa `?sslmode=verify-full&sslrootcert=/percorso/ca.crt` (es. Supabase); senza `sslmode` niente TLS, adatto solo a un database locale |
+| `DATABASE_URL` | sì, tranne per la demo | Stringa di connessione PostgreSQL. Il TLS segue `sslmode`: con `?sslmode=require` (es. Neon) il certificato viene verificato; con un'autorità propria usa `?sslmode=verify-full&sslrootcert=/percorso/ca.crt` (es. Supabase); senza `sslmode` niente TLS, adatto solo a un database locale |
 | `DATABASE_CA_CERT` | no | Contenuto PEM del certificato dell'autorità del database (es. la CA di Supabase), in alternativa a `sslrootcert` dove non ci sono file, come su Vercel. Il certificato viene verificato e `sslmode` nell'URL viene ignorato |
 | `SESSION_SECRET` | sì in produzione | Chiave per firmare il cookie di sessione. In sviluppo, se manca, ne viene generata una casuale a ogni avvio |
 | `RESEND_API_KEY` | sì in produzione | Chiave API di [Resend](https://resend.com) per inviare le email di conferma account, recupero password e prenotazioni. In sviluppo, se manca, il contenuto delle email viene stampato nel log del server |
@@ -158,9 +158,9 @@ Avvia i comandi dalla cartella del progetto, così viene letto il file `.env`; i
 Il repository contiene già la configurazione (`vercel.json` e `script/build-vercel.ts`): il client è servito come sito statico, le API girano in una funzione serverless e un cron giornaliero sostituisce il timer di anonimizzazione.
 
 1. Su [vercel.com](https://vercel.com) → **Add New → Project**, importa il repository.
-2. Nel progetto, **Storage → Create Database → Neon** (piano gratuito) e collegalo: imposta da solo `DATABASE_URL`.
+2. Per un'istanza reale serve un database PostgreSQL: nel progetto, **Storage → Create Database → Neon** (piano gratuito) e collegalo, imposta da solo `DATABASE_URL`. Va bene anche un altro provider, ad esempio Supabase con `DATABASE_CA_CERT`. Per una demo pubblica salta questo passo: senza `DATABASE_URL` la demo usa un database in memoria.
 3. In **Settings → Environment Variables** aggiungi `SESSION_SECRET` e `CRON_SECRET` (genera ciascuno con `openssl rand -hex 32`) e `APP_URL` con l'indirizzo del progetto (es. `https://nome-progetto.vercel.app`). Per un'istanza reale aggiungi anche `RESEND_API_KEY` ed `EMAIL_FROM`; per una demo pubblica, `DEMO_MODE=true` al loro posto.
-4. **Deploy**. Le migrazioni vengono applicate durante il build.
+4. **Deploy**. Con un database, le migrazioni vengono applicate durante il build.
 
 ### Modalità demo
 
@@ -169,7 +169,8 @@ Con `DEMO_MODE=true` l'istanza diventa una demo da far provare a chiunque:
 - la pagina di accesso mostra solo **Prova la demo**: ogni clic crea un account nuovo con due strutture di esempio (un B&B a Siena e un agriturismo in Val d'Orcia), sei camere, circa 130 prenotazioni distribuite su cinque mesi ed eventi locali inventati;
 - ogni visitatore ha i propri dati, quindi può modificare, archiviare e prenotare senza disturbare gli altri; gli account demo vengono cancellati dopo 24 ore dal cron giornaliero (`CRON_SECRET`);
 - registrazione e recupero password sono disattivati e nessuna email viene mai inviata, nemmeno dal widget;
-- in Impostazioni → Widget, **Prova in un sito di esempio** apre `/sito-esempio.html`, un sito inventato che incorpora il widget con lo snippet di due righe.
+- in Impostazioni → Widget, **Prova in un sito di esempio** apre `/sito-esempio.html`, un sito inventato che incorpora il widget con lo snippet di due righe;
+- senza `DATABASE_URL` non serve nessun database: i dati stanno in memoria ([PGlite](https://pglite.dev)) e la sessione in un cookie firmato. Su Vercel ogni istanza della funzione ha la sua memoria: se una richiesta arriva su un'istanza nuova, l'account del visitatore viene ricreato con gli stessi dati di partenza, quindi le modifiche fatte possono sparire. Va bene per una vetrina; per conservare le modifiche imposta `DATABASE_URL`.
 
 ### Contribuire
 
@@ -246,7 +247,7 @@ The server and `npm run db:push` read the `.env` file in the project folder (see
 
 | Variable | Required | Description |
 |---|---|---|
-| `DATABASE_URL` | yes | PostgreSQL connection string. TLS follows `sslmode`: with `?sslmode=require` (e.g. Neon) the certificate is verified; for a private CA use `?sslmode=verify-full&sslrootcert=/path/ca.crt` (e.g. Supabase); without `sslmode` there is no TLS, which is only fine for a local database |
+| `DATABASE_URL` | yes, except for the demo | PostgreSQL connection string. TLS follows `sslmode`: with `?sslmode=require` (e.g. Neon) the certificate is verified; for a private CA use `?sslmode=verify-full&sslrootcert=/path/ca.crt` (e.g. Supabase); without `sslmode` there is no TLS, which is only fine for a local database |
 | `DATABASE_CA_CERT` | no | PEM contents of the database's certificate authority (e.g. Supabase's CA), instead of `sslrootcert` where there are no files, as on Vercel. The certificate is verified and `sslmode` in the URL is ignored |
 | `SESSION_SECRET` | yes in production | Key used to sign the session cookie. In development a random one is generated on each start if missing |
 | `RESEND_API_KEY` | yes in production | [Resend](https://resend.com) API key used to send account confirmation, password reset and booking emails. In development, if missing, email contents are printed to the server log |
@@ -351,9 +352,9 @@ Run the commands from the project folder so the `.env` file is picked up, or set
 The repository already contains the configuration (`vercel.json` and `script/build-vercel.ts`): the client is served as a static site, the API runs in a serverless function, and a daily cron replaces the anonymization timer.
 
 1. On [vercel.com](https://vercel.com) → **Add New → Project**, import the repository.
-2. In the project, **Storage → Create Database → Neon** (free plan) and connect it: it sets `DATABASE_URL` for you.
+2. A real instance needs a PostgreSQL database: in the project, **Storage → Create Database → Neon** (free plan) and connect it, it sets `DATABASE_URL` for you. Another provider works too, for example Supabase with `DATABASE_CA_CERT`. For a public demo skip this step: without `DATABASE_URL` the demo uses an in-memory database.
 3. In **Settings → Environment Variables** add `SESSION_SECRET` and `CRON_SECRET` (generate each with `openssl rand -hex 32`) and `APP_URL` with the project address (e.g. `https://project-name.vercel.app`). For a real instance also add `RESEND_API_KEY` and `EMAIL_FROM`; for a public demo, `DEMO_MODE=true` instead.
-4. **Deploy**. Migrations run during the build.
+4. **Deploy**. With a database, migrations run during the build.
 
 ### Demo mode
 
@@ -362,7 +363,8 @@ With `DEMO_MODE=true` the instance becomes a demo anyone can try:
 - the login page only shows **Prova la demo**: each click creates a fresh account with two sample properties (a B&B in Siena and a farm stay in Val d'Orcia), six rooms, about 130 bookings over five months, and made-up local events;
 - every visitor gets their own data, so they can edit, archive and book without affecting others; demo accounts are deleted after 24 hours by the daily cron (`CRON_SECRET`);
 - sign-up and password reset are disabled and no email is ever sent, not even from the widget;
-- in Impostazioni → Widget, **Prova in un sito di esempio** opens `/sito-esempio.html`, a made-up website embedding the widget with the two-line snippet.
+- in Impostazioni → Widget, **Prova in un sito di esempio** opens `/sito-esempio.html`, a made-up website embedding the widget with the two-line snippet;
+- without `DATABASE_URL` no database is needed: data lives in memory ([PGlite](https://pglite.dev)) and the session in a signed cookie. On Vercel each function instance has its own memory: when a request reaches a new instance, the visitor's account is rebuilt with the same starting data, so their changes may disappear. Fine for a showcase; set `DATABASE_URL` to keep changes.
 
 ### Contributing
 
