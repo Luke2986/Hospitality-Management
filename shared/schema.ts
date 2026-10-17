@@ -94,6 +94,7 @@ export const events = pgTable("events", {
   eventDate: date("event_date").notNull(),
   endDate: date("end_date"),
   location: varchar("location", { length: 200 }),
+  url: varchar("url", { length: 500 }),
   category: varchar("category", { length: 50 }),
   status: varchar("status", { length: 20 }).default("confirmed").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -140,12 +141,31 @@ export const insertBookingSchema = createInsertSchema(bookings).omit({
   propertyId: z.string().optional(),
 });
 
+// Owners often paste "www.example.it": add the scheme, and accept only web links so the widget never renders javascript: URLs.
+const eventUrlSchema = z
+  .string()
+  .trim()
+  .max(500, "Link troppo lungo")
+  .transform((value) => (value && !/^[a-z][a-z0-9+.-]*:/i.test(value) ? `https://${value}` : value))
+  .refine((value) => {
+    if (!value) return true;
+    try {
+      const url = new URL(value);
+      return (url.protocol === "http:" || url.protocol === "https:") && url.hostname.includes(".");
+    } catch {
+      return false;
+    }
+  }, "Inserisci un link valido, es. https://www.sagra.it")
+  .nullish()
+  .transform((value) => value || null);
+
 export const insertEventSchema = createInsertSchema(events).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 }).extend({
   endDate: z.string().nullish().transform(val => val || null),
+  url: eventUrlSchema,
 });
 
 // Types

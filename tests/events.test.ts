@@ -24,6 +24,30 @@ describe("events", () => {
     assert.deepEqual((await owner.get("/api/events")).body, []);
   });
 
+  it("stores an optional web link for the event and shows it in the widget", async () => {
+    const owner = await signUpOwner();
+    const { property } = await createPropertyWithRoom(owner);
+    const event = (url: unknown, title: string) =>
+      owner.post("/api/events", { propertyId: property.id, title, eventDate: "2030-08-10", url });
+
+    const linked = await event("https://www.sagra-del-cinghiale.it/programma", "Sagra");
+    assert.equal(linked.status, 201);
+    assert.equal(linked.body.url, "https://www.sagra-del-cinghiale.it/programma");
+    assert.equal((await event("www.palio.it", "Palio")).body.url, "https://www.palio.it");
+    assert.equal((await event("", "Mercato")).body.url, null);
+    assert.equal((await event(undefined, "Concerto")).body.url, null);
+
+    for (const bad of ["javascript:alert(1)", "data:text/html,hi", "ftp://files.example.it", "non un link"]) {
+      assert.equal((await event(bad, `Evento ${bad}`)).status, 400, bad);
+    }
+
+    const cleared = await owner.patch(`/api/events/${linked.body.id}`, { url: "" });
+    assert.equal(cleared.body.url, null);
+    await owner.patch(`/api/events/${linked.body.id}`, { url: "sagra.it" });
+    const widget = await new Client().get(`/api/widget/properties/${property.id}`);
+    assert.equal(widget.body.events.find((e: { title: string }) => e.title === "Sagra").url, "https://sagra.it");
+  });
+
   it("does not let an owner add events to someone else's property", async () => {
     const alice = await signUpOwner("alice@example.test");
     const bob = await signUpOwner("bob@example.test");

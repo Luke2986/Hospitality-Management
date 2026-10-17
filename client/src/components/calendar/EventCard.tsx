@@ -1,7 +1,7 @@
 import { useState, useId } from 'react';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { Calendar, MapPin, Music, Utensils, Trophy, Church, ShoppingBag, Theater, ChevronDown, LucideIcon } from 'lucide-react';
+import { Calendar, MapPin, Music, Utensils, Trophy, Church, ShoppingBag, Theater, ChevronDown, ExternalLink, LucideIcon } from 'lucide-react';
 import { Event } from '@shared/schema';
 import { cn } from '@/lib/utils';
 
@@ -136,6 +136,21 @@ export function EventCard({ event }: EventCardProps) {
                 <span className="truncate">Luogo non specificato</span>
             )}
           </div>
+
+          {event.url && (
+            <a
+              href={event.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1 text-xs text-primary mt-1 hover:underline focus:outline-none focus:underline"
+              aria-label={`Sito dell'evento ${event.title} (si apre in una nuova scheda)`}
+              data-testid={`link-event-url-${event.id}`}
+            >
+              <ExternalLink className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
+              Sito dell'evento
+            </a>
+          )}
         </div>
       </div>
     </div>

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertEventSchema, type InsertEvent, type Event, type Property } from "@shared/schema";
-import { Plus, Calendar, Trash2, Edit, MapPin } from "lucide-react";
+import { Plus, Calendar, Trash2, Edit, MapPin, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { fetchPage, PaginationControls, type PageResult } from "@/components/pagination";
 import { useToast } from "@/hooks/use-toast";
@@ -52,6 +52,7 @@ export default function Events() {
       eventDate: "",
       endDate: "",
       location: "",
+      url: "",
       category: "",
       propertyId: "",
       status: "confirmed",
@@ -126,6 +127,7 @@ export default function Events() {
       eventDate: event.eventDate,
       endDate: event.endDate || "",
       location: event.location || "",
+      url: event.url || "",
       category: event.category || "",
       propertyId: event.propertyId,
       status: event.status,
@@ -142,6 +144,7 @@ export default function Events() {
       eventDate: "",
       endDate: "",
       location: "",
+      url: "",
       category: "",
       propertyId: firstProperty?.id || "",
       status: "confirmed",
@@ -280,6 +283,26 @@ export default function Events() {
                 />
                 <FormField
                   control={form.control}
+                  name="url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Link dell'evento (facoltativo)</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          value={field.value ?? ""}
+                          type="text"
+                          inputMode="url"
+                          placeholder="https://www.sagra.it"
+                          data-testid="input-event-url"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name="category"
                   render={({ field }) => (
                     <FormItem>
@@ -360,6 +383,18 @@ export default function Events() {
                     <MapPin className="w-3 h-3" />
                     {event.location}
                   </div>
+                )}
+                {event.url && (
+                  <a
+                    href={event.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-sm text-primary hover:underline"
+                    data-testid={`link-event-url-${event.id}`}
+                  >
+                    <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                    <span className="truncate">{new URL(event.url).hostname}</span>
+                  </a>
                 )}
                 <div className="flex gap-2">
                   <Button

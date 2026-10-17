@@ -43,6 +43,13 @@
       "when": 1791200962797,
       "tag": "0005_lyrical_cobalt_man",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792241911840,
+      "tag": "0006_event_url",
+      "breakpoints": true
     }
   ]
 }
