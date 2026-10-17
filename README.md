@@ -10,6 +10,8 @@ Gestionale web per piccole strutture ricettive (B&B, agriturismi, case vacanza).
 
 > **Stato: prototipo.** Vedi [Problemi noti](#problemi-noti).
 
+**Demo online:** [hospitality-demo-five.vercel.app](https://hospitality-demo-five.vercel.app) — premi **Prova la demo**: dati inventati, nessuna registrazione. Vedi [Modalità demo](#modalità-demo).
+
 ### Funzionalità
 
 - **Account** (`/signup`, `/login`): registrazione con conferma via email, recupero password (`/forgot-password`). Ogni proprietario vede e modifica solo le proprie strutture e i dati collegati.
@@ -203,6 +205,8 @@ Le modifiche che restano solo sul tuo computer, senza essere distribuite né mes
 Web-based management system for small hospitality businesses (B&Bs, farm stays, vacation rentals). It provides an owner dashboard, a public booking calendar, and a widget that can be embedded in external sites (e.g. WordPress). The UI is entirely in Italian.
 
 > **Status: prototype.** See [Known issues](#known-issues).
+
+**Live demo:** [hospitality-demo-five.vercel.app](https://hospitality-demo-five.vercel.app) — press **Prova la demo**: made-up data, no sign-up. See [Demo mode](#demo-mode).
 
 ### Features
 
