@@ -1,8 +1,9 @@
 (function() {
   'use strict';
 
-  // Get the widget URL from global config or default to current origin
-  const WIDGET_URL = window.BOOKING_WIDGET_URL || window.location.origin;
+  // The app's address: explicit config, else wherever this script was loaded from.
+  const script = document.currentScript;
+  const WIDGET_URL = window.BOOKING_WIDGET_URL || (script && script.src ? new URL(script.src).origin : window.location.origin);
   const WIDGET_ORIGIN = new URL(WIDGET_URL, window.location.href).origin;
 
   // Find all widget containers on the page

@@ -1,5 +1,5 @@
 import "../server/env";
-import { test as base, expect, type APIRequestContext } from "@playwright/test";
+import { test as base, expect, type APIRequestContext, type FrameLocator, type Page } from "@playwright/test";
 import pg from "pg";
 import type { Booking, Property, Room } from "@shared/schema";
 
@@ -67,4 +67,25 @@ export function nextMonthDates(fromDay: number, toDay: number) {
   const iso = (day: number) =>
     `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   return { checkIn: iso(fromDay), checkOut: iso(toDay) };
+}
+
+// Picks the dates, chooses the room and sends the request, in the widget page or inside its iframe.
+export async function bookFromWidget(
+  widget: Page | FrameLocator,
+  roomId: string,
+  dates: { checkIn: string; checkOut: string },
+  propertyId: string,
+) {
+  await widget.getByTestId(`calendar-day-${dates.checkIn}`).click();
+  await widget.getByTestId(`calendar-day-${dates.checkOut}`).click();
+  await widget.getByTestId(`button-select-room-${roomId}`).click();
+  await widget.getByTestId("input-guest-name").fill("Mario Rossi");
+  await widget.getByTestId("input-guest-email").fill("mario@example.test");
+  await widget.getByTestId("button-continue").click();
+  await expect(widget.getByTestId("text-privacy-notice").getByRole("link")).toHaveAttribute(
+    "href",
+    `/widget/${propertyId}/privacy`,
+  );
+  await widget.getByTestId("button-confirm").click();
+  await expect(widget.getByText("Richiesta Inviata!")).toBeVisible();
 }

@@ -8,7 +8,7 @@
 
 Gestionale web per piccole strutture ricettive (B&B, agriturismi, case vacanza). Include una dashboard per il proprietario, un calendario di prenotazione pubblico e un widget incorporabile in siti esterni (es. WordPress). L'interfaccia è interamente in italiano.
 
-> **Stato: prototipo, non pronto per la produzione.** Vedi [Problemi noti](#problemi-noti).
+> **Stato: prototipo.** Vedi [Problemi noti](#problemi-noti).
 
 ### Funzionalità
 
@@ -78,12 +78,14 @@ Il server e `npm run db:push` leggono il file `.env` nella cartella del progetto
 
 ### Incorporare il widget
 
+Il codice si copia già pronto da Impostazioni → Widget, una riga per ogni struttura. Va incollato nella pagina del sito dove deve comparire il calendario:
+
 ```html
 <div data-booking-widget data-property-id="ID_STRUTTURA"></div>
-<script src="https://TUO-DOMINIO/widget.js"></script>
+<script src="https://TUO-DOMINIO/widget.js" async></script>
 ```
 
-Per usare un dominio diverso da quello della pagina, definire prima `window.BOOKING_WIDGET_URL`.
+Funziona su qualsiasi sito, anche su un dominio diverso da quello dell'app: il widget si carica dall'indirizzo dello script e si adatta in altezza da solo. Su WordPress incollalo in un blocco "HTML personalizzato"; su Wix, Squarespace e simili nel blocco "Incorpora codice". Se lo script arriva da un indirizzo diverso da quello dell'app (es. una CDN), imposta prima `window.BOOKING_WIDGET_URL`.
 
 ### API
 
@@ -174,7 +176,7 @@ Le modifiche che restano solo sul tuo computer, senza essere distribuite né mes
 
 Web-based management system for small hospitality businesses (B&Bs, farm stays, vacation rentals). It provides an owner dashboard, a public booking calendar, and a widget that can be embedded in external sites (e.g. WordPress). The UI is entirely in Italian.
 
-> **Status: prototype, not production-ready.** See [Known issues](#known-issues).
+> **Status: prototype.** See [Known issues](#known-issues).
 
 ### Features
 
@@ -244,12 +246,14 @@ The server and `npm run db:push` read the `.env` file in the project folder (see
 
 ### Embedding the widget
 
+Copy the ready-made code from Impostazioni → Widget (one snippet per property) and paste it where the calendar should appear:
+
 ```html
 <div data-booking-widget data-property-id="PROPERTY_ID"></div>
-<script src="https://YOUR-DOMAIN/widget.js"></script>
+<script src="https://YOUR-DOMAIN/widget.js" async></script>
 ```
 
-To load the widget from a different domain than the host page, define `window.BOOKING_WIDGET_URL` first.
+It works on any site, including a different domain from the app: the widget loads from the script's address and resizes itself. On WordPress paste it into a "Custom HTML" block; on Wix, Squarespace and similar into the "Embed code" block. If the script is served from somewhere other than the app (e.g. a CDN), set `window.BOOKING_WIDGET_URL` first.
 
 ### API
 

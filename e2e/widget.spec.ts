@@ -1,4 +1,4 @@
-import { test, expect, signUpOwner, createPropertyWithRoom, createBooking, nextMonthDates } from "./fixtures";
+import { test, expect, signUpOwner, createPropertyWithRoom, createBooking, nextMonthDates, bookFromWidget } from "./fixtures";
 
 test("a guest books from the widget and the owner confirms the request", async ({ page, browser }) => {
   await signUpOwner(page.request);
@@ -8,20 +8,7 @@ test("a guest books from the widget and the owner confirms the request", async (
   const guestContext = await browser.newContext();
   const guest = await guestContext.newPage();
   await guest.goto(`/widget/${property.id}`);
-  await guest.getByTestId(`calendar-day-${checkIn}`).click();
-  await guest.getByTestId(`calendar-day-${checkOut}`).click();
-  await expect(guest.getByTestId(`room-card-${room.id}`)).toContainText("240");
-  await guest.getByTestId(`button-select-room-${room.id}`).click();
-
-  await guest.getByTestId("input-guest-name").fill("Mario Rossi");
-  await guest.getByTestId("input-guest-email").fill("mario@example.test");
-  await guest.getByTestId("button-continue").click();
-  await expect(guest.getByTestId("text-privacy-notice").getByRole("link")).toHaveAttribute(
-    "href",
-    `/widget/${property.id}/privacy`,
-  );
-  await guest.getByTestId("button-confirm").click();
-  await expect(guest.getByText("Richiesta Inviata!")).toBeVisible();
+  await bookFromWidget(guest, room.id, { checkIn, checkOut }, property.id);
   await guestContext.close();
 
   await page.goto("/dashboard/bookings");

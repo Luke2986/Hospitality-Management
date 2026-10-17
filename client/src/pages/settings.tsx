@@ -25,9 +25,6 @@ export default function Settings() {
   const generateEmbedCode = (propertyId: string) => {
     const widgetUrl = window.location.origin;
     return `<div data-booking-widget data-property-id="${propertyId}"></div>
-<script>
-  window.BOOKING_WIDGET_URL = '${widgetUrl}';
-</script>
 <script src="${widgetUrl}/widget.js" async></script>`;
   };
 
