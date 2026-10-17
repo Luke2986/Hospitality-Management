@@ -54,6 +54,7 @@ Il server e `npm run db:push` leggono il file `.env` nella cartella del progetto
 | Variabile | Obbligatoria | Descrizione |
 |---|---|---|
 | `DATABASE_URL` | sì | Stringa di connessione PostgreSQL. Il TLS segue `sslmode`: con `?sslmode=require` (es. Neon) il certificato viene verificato; con un'autorità propria usa `?sslmode=verify-full&sslrootcert=/percorso/ca.crt` (es. Supabase); senza `sslmode` niente TLS, adatto solo a un database locale |
+| `DATABASE_CA_CERT` | no | Contenuto PEM del certificato dell'autorità del database (es. la CA di Supabase), in alternativa a `sslrootcert` dove non ci sono file, come su Vercel. Il certificato viene verificato e `sslmode` nell'URL viene ignorato |
 | `SESSION_SECRET` | sì in produzione | Chiave per firmare il cookie di sessione. In sviluppo, se manca, ne viene generata una casuale a ogni avvio |
 | `RESEND_API_KEY` | sì in produzione | Chiave API di [Resend](https://resend.com) per inviare le email di conferma account, recupero password e prenotazioni. In sviluppo, se manca, il contenuto delle email viene stampato nel log del server |
 | `EMAIL_FROM` | sì in produzione | Mittente delle email, es. `Hospitality Manager <noreply@tuodominio.it>` (dominio verificato su Resend) |
@@ -246,6 +247,7 @@ The server and `npm run db:push` read the `.env` file in the project folder (see
 | Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | yes | PostgreSQL connection string. TLS follows `sslmode`: with `?sslmode=require` (e.g. Neon) the certificate is verified; for a private CA use `?sslmode=verify-full&sslrootcert=/path/ca.crt` (e.g. Supabase); without `sslmode` there is no TLS, which is only fine for a local database |
+| `DATABASE_CA_CERT` | no | PEM contents of the database's certificate authority (e.g. Supabase's CA), instead of `sslrootcert` where there are no files, as on Vercel. The certificate is verified and `sslmode` in the URL is ignored |
 | `SESSION_SECRET` | yes in production | Key used to sign the session cookie. In development a random one is generated on each start if missing |
 | `RESEND_API_KEY` | yes in production | [Resend](https://resend.com) API key used to send account confirmation, password reset and booking emails. In development, if missing, email contents are printed to the server log |
 | `EMAIL_FROM` | yes in production | Email sender, e.g. `Hospitality Manager <noreply@yourdomain.com>` (domain verified on Resend) |
