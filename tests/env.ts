@@ -11,3 +11,5 @@ delete process.env.RESEND_API_KEY;
 delete process.env.TURNSTILE_SITE_KEY;
 delete process.env.TURNSTILE_SECRET_KEY;
 delete process.env.GUEST_DATA_RETENTION_MONTHS;
+delete process.env.DEMO_MODE;
+delete process.env.CRON_SECRET;

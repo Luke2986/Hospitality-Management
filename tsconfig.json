@@ -1,5 +1,5 @@
 {
-  "include": ["client/src/**/*", "shared/**/*", "server/**/*", "tests/**/*", "e2e/**/*", "playwright.config.ts"],
+  "include": ["client/src/**/*", "shared/**/*", "server/**/*", "tests/**/*", "e2e/**/*", "script/**/*", "playwright.config.ts"],
   "exclude": ["node_modules", "build", "dist"],
   "compilerOptions": {
     "incremental": true,

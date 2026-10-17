@@ -1,5 +1,5 @@
 import { storage } from "./storage";
-import { log } from "./vite";
+import { log } from "./log";
 import { logError } from "./log-error";
 
 const DAY_MS = 24 * 60 * 60 * 1000;

@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, ExternalLink, Code2, CheckCircle2 } from "lucide-react";
+import { Copy, ExternalLink, Code2, CheckCircle2, Globe } from "lucide-react";
 import type { User, Property } from "@shared/schema";
 import { useState } from "react";
 import { PrivacySettingsCard } from "@/components/privacy-settings";
@@ -164,6 +164,12 @@ export default function Settings() {
                               >
                                 <ExternalLink className="w-4 h-4 mr-2" />
                                 Anteprima
+                              </Button>
+                              <Button asChild variant="ghost" data-testid={`button-sample-site-${property.id}`}>
+                                <a href={`/sito-esempio.html?property=${property.id}`} target="_blank" rel="noopener noreferrer">
+                                  <Globe className="w-4 h-4 mr-2" />
+                                  Prova in un sito di esempio
+                                </a>
                               </Button>
                             </div>
                           </CardContent>

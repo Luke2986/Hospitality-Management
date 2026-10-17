@@ -2,7 +2,9 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
 import { storage } from "./storage";
-import { setupAuth, requireAuth, rateLimit } from "./auth";
+import { timingSafeEqual } from "crypto";
+import { setupAuth, requireAuth, rateLimit, toPublicUser } from "./auth";
+import { createDemoAccount, isDemoMode, removeExpiredDemoAccounts } from "./demo";
 import { turnstileSiteKey, verifyTurnstile } from "./turnstile";
 import { logError } from "./log-error";
 import { guestDataRetentionMonths } from "./retention";
@@ -128,7 +130,29 @@ function queryString(req: Request, key: string) {
   return typeof req.query[key] === "string" ? (req.query[key] as string) : undefined;
 }
 
+// Visitors of the public demo share no inbox, so account flows that rely on email are switched off.
+const DEMO_DISABLED_ROUTES = [
+  "/api/auth/signup",
+  "/api/auth/verify-email",
+  "/api/auth/resend-verification",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
+];
+
+function hasCronSecret(req: Request) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false;
+  const expected = Buffer.from(`Bearer ${secret}`);
+  const given = Buffer.from(req.get("authorization") ?? "");
+  return given.length === expected.length && timingSafeEqual(given, expected);
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  if (isDemoMode()) {
+    app.use(DEMO_DISABLED_ROUTES, (_req, res) => {
+      res.status(403).json({ error: "Non disponibile nella demo" });
+    });
+  }
   setupAuth(app);
 
   for (const param of ["id", "propertyId"]) {
@@ -245,6 +269,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       sendError(res, error);
     }
   });
+
+  app.get("/api/config", (_req: Request, res: Response) => {
+    res.json({ demo: isDemoMode() });
+  });
+
+  // Daily maintenance for hosts without a long-running process (e.g. Vercel Cron, which sends CRON_SECRET).
+  app.get("/api/cron/daily", async (req: Request, res: Response) => {
+    if (!process.env.CRON_SECRET) return res.status(404).json({ error: "Not found" });
+    if (!hasCronSecret(req)) return res.status(401).json({ error: "Non autorizzato" });
+    try {
+      const anonymized = await storage.anonymizeBookingsEndedBefore(guestDataRetentionMonths());
+      const removedDemoAccounts = isDemoMode() ? await removeExpiredDemoAccounts() : 0;
+      res.json({ anonymized, removedDemoAccounts });
+    } catch (error: any) {
+      sendError(res, error);
+    }
+  });
+
+  if (isDemoMode()) {
+    const demoLimiter = rateLimit({ name: "demo", windowMs: 60 * 60 * 1000, max: 10 });
+    app.post("/api/demo/login", demoLimiter, async (req: Request, res: Response) => {
+      try {
+        const user = toPublicUser(await createDemoAccount());
+        req.login(user, (err) => {
+          if (err) return sendError(res, err);
+          res.status(201).json(user);
+        });
+      } catch (error: any) {
+        sendError(res, error);
+      }
+    });
+  }
 
   // Everything below requires an authenticated owner
   app.use("/api", requireAuth);

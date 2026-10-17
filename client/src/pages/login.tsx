@@ -10,7 +10,8 @@ import { ApiError, apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link, Redirect, useLocation } from "wouter";
 import { useAuth, AUTH_QUERY_KEY } from "@/hooks/use-auth";
-import { LogIn } from "lucide-react";
+import { useAppConfig } from "@/hooks/use-app-config";
+import { LogIn, PlayCircle } from "lucide-react";
 import { useState } from "react";
 
 const loginSchema = z.object({
@@ -24,6 +25,7 @@ export default function Login() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+  const { demo } = useAppConfig();
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
 
   const form = useForm<LoginForm>({
@@ -73,6 +75,20 @@ export default function Login() {
     },
   });
 
+  const demoMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/demo/login");
+      return res.json();
+    },
+    onSuccess: (user) => {
+      queryClient.setQueryData(AUTH_QUERY_KEY, user);
+      setLocation("/dashboard");
+    },
+    onError: (error: Error) => {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    },
+  });
+
   const onSubmit = (data: LoginForm) => {
     setUnverifiedEmail(null);
     loginMutation.mutate(data);
@@ -80,6 +96,35 @@ export default function Login() {
 
   if (user) {
     return <Redirect to="/dashboard" />;
+  }
+
+  if (demo) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-3xl font-bold flex items-center gap-2">
+              <PlayCircle className="w-8 h-8 text-primary" />
+              Prova la demo
+            </CardTitle>
+            <CardDescription>
+              Entri nella dashboard di un B&B e di un agriturismo con prenotazioni ed eventi di esempio. L'account è
+              tuo per 24 ore: puoi modificare, archiviare e prenotare liberamente, nessuna email viene inviata.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              className="w-full"
+              onClick={() => demoMutation.mutate()}
+              disabled={demoMutation.isPending}
+              data-testid="button-demo-login"
+            >
+              {demoMutation.isPending ? "Preparazione dei dati..." : "Entra nella demo"}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (

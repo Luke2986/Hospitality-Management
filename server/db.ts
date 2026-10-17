@@ -7,7 +7,8 @@ if (!process.env.DATABASE_URL) {
 }
 
 // TLS follows the sslmode in DATABASE_URL: require or verify-full check the certificate, no-verify skips the check.
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// Serverless platforms run many small instances: keep each one's share of the database connections low.
+export const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: process.env.VERCEL ? 3 : 10 });
 
 // Without a listener, an idle connection dropped by the server crashes the process.
 pool.on("error", (err) => {

@@ -1,6 +1,7 @@
 import "./env";
 import { createApp } from "./app";
-import { setupVite, serveStatic, log } from "./vite";
+import { setupVite, serveStatic } from "./vite";
+import { log } from "./log";
 import { startGuestDataRetention } from "./retention";
 
 (async () => {

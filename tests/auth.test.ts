@@ -82,4 +82,13 @@ describe("authentication", () => {
     assert.equal((await bob.get("/api/properties")).body.length, 0);
     assert.equal((await alice.get("/api/properties")).body.length, 1);
   });
+
+  it("keeps the demo and cron routes off unless configured", async () => {
+    const client = new Client();
+    assert.deepEqual((await client.get("/api/config")).body, { demo: false });
+    assert.notEqual((await client.post("/api/demo/login")).status, 201);
+    assert.equal((await client.get("/api/cron/daily")).status, 404);
+    const { rows } = await pool.query("SELECT count(*)::int AS n FROM users");
+    assert.equal(rows[0].n, 0);
+  });
 });

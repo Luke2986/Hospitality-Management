@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Sito di esempio con il widget di prenotazione</title>
+  <style>
+    :root { --ink: #2b2620; --muted: #6f655a; --paper: #faf6ef; --accent: #7a4e8c; --line: #e6dccd; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Georgia, "Times New Roman", serif; color: var(--ink); background: var(--paper); line-height: 1.6; }
+    .notice { background: #2b2620; color: #faf6ef; font: 14px/1.4 system-ui, sans-serif; padding: 10px 16px; text-align: center; }
+    .notice code { background: rgba(255,255,255,.12); padding: 1px 6px; border-radius: 4px; }
+    header { padding: 72px 16px 56px; text-align: center; border-bottom: 1px solid var(--line); }
+    header p.kicker { font: 600 13px/1 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+    header h1 { font-size: clamp(36px, 6vw, 60px); font-weight: 400; margin: 0 0 12px; }
+    header p { color: var(--muted); max-width: 560px; margin: 0 auto; font-size: 18px; }
+    main { max-width: 1120px; margin: 0 auto; padding: 48px 16px 80px; }
+    .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 32px; margin-bottom: 56px; }
+    .cols h2 { font-size: 20px; font-weight: 400; margin: 0 0 8px; color: var(--accent); }
+    .cols p { margin: 0; color: var(--muted); }
+    section.booking h2 { font-size: 32px; font-weight: 400; text-align: center; margin: 0 0 24px; }
+    .missing { font: 15px system-ui, sans-serif; text-align: center; color: var(--muted); padding: 32px; border: 1px dashed var(--line); border-radius: 12px; }
+    footer { text-align: center; color: var(--muted); font: 13px system-ui, sans-serif; padding: 24px 16px 40px; border-top: 1px solid var(--line); }
+  </style>
+</head>
+<body>
+  <div class="notice">
+    Sito inventato per mostrare il widget incorporato. La sezione "Prenota" qui sotto è il codice copiato da
+    Impostazioni → Widget: <code>&lt;div data-booking-widget …&gt;</code> + <code>widget.js</code>.
+  </div>
+
+  <header>
+    <p class="kicker">Bed &amp; breakfast nel centro storico</p>
+    <h1>Il Glicine</h1>
+    <p>Tre camere in un palazzo del Settecento, a cinque minuti a piedi dalla piazza principale. Colazione fatta in casa nel cortile.</p>
+  </header>
+
+  <main>
+    <div class="cols">
+      <div><h2>La casa</h2><p>Soffitti a volta, cotto originale e un cortile interno dove d'estate si fa colazione sotto il glicine.</p></div>
+      <div><h2>La colazione</h2><p>Torte del giorno, marmellate nostre, pane del forno di quartiere e caffè della moka.</p></div>
+      <div><h2>Dintorni</h2><p>Musei, botteghe e trattorie a pochi passi; in auto le colline e le cantine in mezz'ora.</p></div>
+    </div>
+
+    <section class="booking" id="prenota">
+      <h2>Prenota il tuo soggiorno</h2>
+      <div id="widget-slot"></div>
+    </section>
+  </main>
+
+  <footer>Pagina dimostrativa di Hospitality Management · non è il sito di una struttura reale</footer>
+
+  <script>
+    (function () {
+      var propertyId = new URLSearchParams(window.location.search).get("property");
+      var slot = document.getElementById("widget-slot");
+      if (!propertyId) {
+        slot.innerHTML = '<p class="missing">Apri questa pagina dal pulsante "Prova in un sito di esempio" in Impostazioni → Widget.</p>';
+        return;
+      }
+      var container = document.createElement("div");
+      container.setAttribute("data-booking-widget", "");
+      container.setAttribute("data-property-id", propertyId);
+      slot.appendChild(container);
+      var script = document.createElement("script");
+      script.src = "/widget.js";
+      script.async = true;
+      document.body.appendChild(script);
+    })();
+  </script>
+</body>
+</html>

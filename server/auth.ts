@@ -72,7 +72,7 @@ async function destroyUserSessions(userId: string) {
   }
 }
 
-function toPublicUser(user: User): PublicUser {
+export function toPublicUser(user: User): PublicUser {
   return { id: user.id, email: user.email, fullName: user.fullName };
 }
 

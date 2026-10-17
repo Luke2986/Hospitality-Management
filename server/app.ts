@@ -1,7 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes, INTERNAL_ERROR } from "./routes";
 import { logError } from "./log-error";
-import { log } from "./vite";
+import { log } from "./log";
 
 export async function createApp() {
   const app = express();

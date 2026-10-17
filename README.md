@@ -59,7 +59,9 @@ Il server e `npm run db:push` leggono il file `.env` nella cartella del progetto
 | `EMAIL_FROM` | sì in produzione | Mittente delle email, es. `Hospitality Manager <noreply@tuodominio.it>` (dominio verificato su Resend) |
 | `APP_URL` | sì in produzione | URL pubblico dell'app, usato per i link nelle email (es. `https://gestionale.tuodominio.it`) |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | no | Chiavi di [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) (gratuito) per la verifica anti-bot sulle prenotazioni del widget. Vanno impostate entrambe o nessuna; senza chiavi resta attivo solo il campo trappola nascosto |
-| `GUEST_DATA_RETENTION_MONTHS` | no | Mesi dopo il check-out oltre i quali i dati personali degli ospiti vengono anonimizzati (default `24`). Il controllo gira all'avvio e poi una volta al giorno |
+| `GUEST_DATA_RETENTION_MONTHS` | no | Mesi dopo il check-out oltre i quali i dati personali degli ospiti vengono anonimizzati (default `24`). Il controllo gira all'avvio e poi una volta al giorno (su Vercel con il cron) |
+| `DEMO_MODE` | no | `true` trasforma l'istanza in una demo pubblica (vedi [Modalità demo](#modalità-demo)) |
+| `CRON_SECRET` | no | Abilita `GET /api/cron/daily` (anonimizzazione e pulizia della demo) per chi invia `Authorization: Bearer <CRON_SECRET>`. Serve sugli hosting senza processo sempre attivo, come Vercel |
 | `PORT` | no | Porta del server (default `5000`) |
 | `TEST_DATABASE_URL` | solo per `npm test` e `npm run test:e2e` | Database PostgreSQL usa e getta per i test. I test ne cancellano tutti i dati: non usare mai un database con dati veri |
 
@@ -73,7 +75,9 @@ Il server e `npm run db:push` leggono il file `.env` nella cartella del progetto
 | `npm run check` | Controllo dei tipi TypeScript |
 | `npm test` | Test di integrazione su un database reale (richiede `TEST_DATABASE_URL`) |
 | `npm run test:e2e` | Test end-to-end dell'interfaccia con Playwright (richiede `TEST_DATABASE_URL`; la prima volta esegui `npx playwright install chromium`) |
-| `npm run db:push` | Applica lo schema al database con Drizzle Kit |
+| `npm run db:migrate` | Applica le migrazioni in `migrations/` al database |
+| `npm run db:push` | Applica lo schema al database con Drizzle Kit (sviluppo) |
+| `npm run build:vercel` | Build per Vercel in `.vercel/output` (client statico, funzione `/api`, cron); applica le migrazioni se c'è `DATABASE_URL` |
 | `npm run db:claim-legacy -- <email>` | Assegna all'account indicato le strutture create prima dell'autenticazione |
 
 ### Incorporare il widget
@@ -101,6 +105,7 @@ Tutte le rotte sono sotto `/api` e restituiscono JSON. Le rotte del widget e di 
 | Calendario e dashboard | `GET /api/calendar`, `GET /api/dashboard/summary?today=AAAA-MM-GG` |
 | Account | `GET/PUT /api/account/privacy` (dati del titolare del trattamento) |
 | Widget (pubblico) | `GET /api/widget/properties/:propertyId`, `POST /api/widget/bookings`, `POST /api/widget/bookings/:id/cancel` |
+| Servizio (pubblico) | `GET /api/config`, `POST /api/demo/login` (solo con `DEMO_MODE`), `GET /api/cron/daily` (solo con `CRON_SECRET`) |
 
 Le prenotazioni dal widget nascono sempre `pending` e il prezzo totale è calcolato dal server.
 
@@ -112,10 +117,11 @@ Le prenotazioni dal widget nascono sempre `pending` e il prezzo totale è calcol
 
 ```
 client/      Frontend React (pagine, componenti, widget.js)
-server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, env.ts, turnstile.ts, log-error.ts, claim-legacy.ts, retention.ts, app.ts, index.ts
+server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, env.ts, turnstile.ts, log-error.ts, log.ts, claim-legacy.ts, retention.ts, demo.ts, migrate.ts, app.ts, index.ts, vercel.ts
 shared/      Schema Drizzle e schemi Zod condivisi
 tests/       Test di integrazione (node:test) sulle API
 e2e/         Test end-to-end dell'interfaccia (Playwright)
+script/      Build per Vercel
 migrations/  Migrazioni generate da Drizzle Kit
 ```
 
@@ -139,12 +145,30 @@ Il progetto non dipende da nessuna piattaforma: serve un server con Node.js 20.1
 
 ```bash
 npm ci
-npm run db:push
+npm run db:migrate
 npm run build
 NODE_ENV=production npm start
 ```
 
 Avvia i comandi dalla cartella del progetto, così viene letto il file `.env`; in alternativa imposta le variabili nell'ambiente. In produzione sono obbligatorie `DATABASE_URL`, `SESSION_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM` e `APP_URL`. Metti l'app dietro un reverse proxy con HTTPS (es. Caddy o Nginx): il cookie di sessione è `Secure` e il server si fida di un solo proxy davanti a sé.
+
+#### Deploy su Vercel
+
+Il repository contiene già la configurazione (`vercel.json` e `script/build-vercel.ts`): il client è servito come sito statico, le API girano in una funzione serverless e un cron giornaliero sostituisce il timer di anonimizzazione.
+
+1. Su [vercel.com](https://vercel.com) → **Add New → Project**, importa il repository.
+2. Nel progetto, **Storage → Create Database → Neon** (piano gratuito) e collegalo: imposta da solo `DATABASE_URL`.
+3. In **Settings → Environment Variables** aggiungi `SESSION_SECRET` e `CRON_SECRET` (genera ciascuno con `openssl rand -hex 32`) e `APP_URL` con l'indirizzo del progetto (es. `https://nome-progetto.vercel.app`). Per un'istanza reale aggiungi anche `RESEND_API_KEY` ed `EMAIL_FROM`; per una demo pubblica, `DEMO_MODE=true` al loro posto.
+4. **Deploy**. Le migrazioni vengono applicate durante il build.
+
+### Modalità demo
+
+Con `DEMO_MODE=true` l'istanza diventa una demo da far provare a chiunque:
+
+- la pagina di accesso mostra solo **Prova la demo**: ogni clic crea un account nuovo con due strutture di esempio (un B&B a Siena e un agriturismo in Val d'Orcia), sei camere, circa 130 prenotazioni distribuite su cinque mesi ed eventi locali inventati;
+- ogni visitatore ha i propri dati, quindi può modificare, archiviare e prenotare senza disturbare gli altri; gli account demo vengono cancellati dopo 24 ore dal cron giornaliero (`CRON_SECRET`);
+- registrazione e recupero password sono disattivati e nessuna email viene mai inviata, nemmeno dal widget;
+- in Impostazioni → Widget, **Prova in un sito di esempio** apre `/sito-esempio.html`, un sito inventato che incorpora il widget con lo snippet di due righe.
 
 ### Contribuire
 
@@ -227,7 +251,9 @@ The server and `npm run db:push` read the `.env` file in the project folder (see
 | `EMAIL_FROM` | yes in production | Email sender, e.g. `Hospitality Manager <noreply@yourdomain.com>` (domain verified on Resend) |
 | `APP_URL` | yes in production | Public URL of the app, used for links in emails (e.g. `https://app.yourdomain.com`) |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | no | [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) keys (free) for bot protection on widget bookings. Set both or neither; without them only the hidden honeypot field is active |
-| `GUEST_DATA_RETENTION_MONTHS` | no | Months after check-out after which guests' personal data is anonymized (default `24`). The check runs at startup and then once a day |
+| `GUEST_DATA_RETENTION_MONTHS` | no | Months after check-out after which guests' personal data is anonymized (default `24`). The check runs at startup and then once a day (on Vercel via the cron) |
+| `DEMO_MODE` | no | `true` turns the instance into a public demo (see [Demo mode](#demo-mode)) |
+| `CRON_SECRET` | no | Enables `GET /api/cron/daily` (anonymization and demo cleanup) for requests sending `Authorization: Bearer <CRON_SECRET>`. Needed on hosts without a long-running process, such as Vercel |
 | `PORT` | no | Server port (default `5000`) |
 | `TEST_DATABASE_URL` | only for `npm test` and `npm run test:e2e` | Disposable PostgreSQL database for the tests. The tests wipe all its data: never point it at real data |
 
@@ -241,7 +267,9 @@ The server and `npm run db:push` read the `.env` file in the project folder (see
 | `npm run check` | TypeScript type check |
 | `npm test` | Integration tests against a real database (needs `TEST_DATABASE_URL`) |
 | `npm run test:e2e` | End-to-end UI tests with Playwright (needs `TEST_DATABASE_URL`; the first time run `npx playwright install chromium`) |
-| `npm run db:push` | Push the schema to the database with Drizzle Kit |
+| `npm run db:migrate` | Apply the migrations in `migrations/` to the database |
+| `npm run db:push` | Push the schema to the database with Drizzle Kit (development) |
+| `npm run build:vercel` | Vercel build into `.vercel/output` (static client, `/api` function, cron); applies migrations when `DATABASE_URL` is set |
 | `npm run db:claim-legacy -- <email>` | Assign properties created before authentication to the given account |
 
 ### Embedding the widget
@@ -269,6 +297,7 @@ All routes live under `/api` and return JSON. Widget and auth routes are public;
 | Calendar and dashboard | `GET /api/calendar`, `GET /api/dashboard/summary?today=YYYY-MM-DD` |
 | Account | `GET/PUT /api/account/privacy` (data controller details) |
 | Widget (public) | `GET /api/widget/properties/:propertyId`, `POST /api/widget/bookings`, `POST /api/widget/bookings/:id/cancel` |
+| Service (public) | `GET /api/config`, `POST /api/demo/login` (only with `DEMO_MODE`), `GET /api/cron/daily` (only with `CRON_SECRET`) |
 
 Widget bookings are always created as `pending`, and the total price is computed server-side.
 
@@ -280,10 +309,11 @@ Widget bookings are always created as `pending`, and the total price is computed
 
 ```
 client/      React frontend (pages, components, widget.js)
-server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, env.ts, turnstile.ts, log-error.ts, claim-legacy.ts, retention.ts, app.ts, index.ts
+server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, env.ts, turnstile.ts, log-error.ts, log.ts, claim-legacy.ts, retention.ts, demo.ts, migrate.ts, app.ts, index.ts, vercel.ts
 shared/      Drizzle schema and shared Zod schemas
 tests/       API integration tests (node:test)
 e2e/         End-to-end UI tests (Playwright)
+script/      Vercel build
 migrations/  Migrations generated by Drizzle Kit
 ```
 
@@ -307,12 +337,30 @@ The project is platform-independent: all it needs is a server with Node.js 20.12
 
 ```bash
 npm ci
-npm run db:push
+npm run db:migrate
 npm run build
 NODE_ENV=production npm start
 ```
 
 Run the commands from the project folder so the `.env` file is picked up, or set the variables in the environment. In production `DATABASE_URL`, `SESSION_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM` and `APP_URL` are required. Put the app behind a reverse proxy with HTTPS (e.g. Caddy or Nginx): the session cookie is `Secure` and the server trusts exactly one proxy in front of it.
+
+#### Deploying to Vercel
+
+The repository already contains the configuration (`vercel.json` and `script/build-vercel.ts`): the client is served as a static site, the API runs in a serverless function, and a daily cron replaces the anonymization timer.
+
+1. On [vercel.com](https://vercel.com) → **Add New → Project**, import the repository.
+2. In the project, **Storage → Create Database → Neon** (free plan) and connect it: it sets `DATABASE_URL` for you.
+3. In **Settings → Environment Variables** add `SESSION_SECRET` and `CRON_SECRET` (generate each with `openssl rand -hex 32`) and `APP_URL` with the project address (e.g. `https://project-name.vercel.app`). For a real instance also add `RESEND_API_KEY` and `EMAIL_FROM`; for a public demo, `DEMO_MODE=true` instead.
+4. **Deploy**. Migrations run during the build.
+
+### Demo mode
+
+With `DEMO_MODE=true` the instance becomes a demo anyone can try:
+
+- the login page only shows **Prova la demo**: each click creates a fresh account with two sample properties (a B&B in Siena and a farm stay in Val d'Orcia), six rooms, about 130 bookings over five months, and made-up local events;
+- every visitor gets their own data, so they can edit, archive and book without affecting others; demo accounts are deleted after 24 hours by the daily cron (`CRON_SECRET`);
+- sign-up and password reset are disabled and no email is ever sent, not even from the widget;
+- in Impostazioni → Widget, **Prova in un sito di esempio** opens `/sito-esempio.html`, a made-up website embedding the widget with the two-line snippet.
 
 ### Contributing
 

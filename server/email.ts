@@ -1,4 +1,5 @@
-import { log } from "./vite";
+import { log } from "./log";
+import { isDemoMode } from "./demo";
 import type { Booking, Property, Room } from "@shared/schema";
 
 type Email = { to: string; subject: string; text: string; html: string; replyTo?: string };
@@ -6,7 +7,7 @@ type Email = { to: string; subject: string; text: string; html: string; replyTo?
 const isProduction = process.env.NODE_ENV === "production";
 
 export function assertEmailConfig() {
-  if (!isProduction) return;
+  if (!isProduction || isDemoMode()) return;
   const missing = ["RESEND_API_KEY", "EMAIL_FROM", "APP_URL"].filter((key) => !process.env[key]);
   if (missing.length) {
     throw new Error(`Missing required environment variables: ${missing.join(", ")}`);
@@ -25,6 +26,11 @@ function escapeHtml(value: string) {
 
 async function sendEmail(email: Email) {
   const apiKey = process.env.RESEND_API_KEY;
+  // In the public demo anyone can type any address into the widget: never mail real people from it.
+  if (isDemoMode()) {
+    log(`Email not sent (demo mode). To: ${email.to} | ${email.subject}`, "email");
+    return;
+  }
   if (!apiKey) {
     log(`Email not sent (RESEND_API_KEY missing). To: ${email.to} | ${email.subject}\n${email.text}`, "email");
     return;
