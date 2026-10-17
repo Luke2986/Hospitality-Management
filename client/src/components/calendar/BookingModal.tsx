@@ -117,7 +117,7 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights, tur
       roomId: room.id,
       guestName: guestData.name,
       guestEmail: guestData.email,
-      guestPhone: guestData.phone,
+      guestPhone: guestData.phone.trim() || undefined,
       checkIn: toDateString(selectedDates.from),
       checkOut: toDateString(selectedDates.to),
       guestsCount: guestData.guests,
@@ -243,9 +243,8 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights, tur
                           />
                       </div>
                       <div>
-                          <label className="block text-sm font-medium mb-1.5 text-foreground">Telefono</label>
+                          <label className="block text-sm font-medium mb-1.5 text-foreground">Telefono (facoltativo)</label>
                           <input 
-                            required 
                             type="tel" 
                             className="w-full border border-input rounded-lg p-2.5 focus:ring-2 focus:ring-primary/50 outline-none transition-all bg-background" 
                             placeholder="+39 333 123 4567" 
@@ -315,15 +314,17 @@ export function BookingModal({ isOpen, onClose, room, selectedDates, nights, tur
                         <p className="font-medium text-foreground truncate">{guestData.email}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                        <Phone size={16} />
+                    {guestData.phone.trim() && (
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                          <Phone size={16} />
+                        </div>
+                        <div className="overflow-hidden">
+                          <p className="text-xs text-muted-foreground">Telefono</p>
+                          <p className="font-medium text-foreground truncate">{guestData.phone}</p>
+                        </div>
                       </div>
-                      <div className="overflow-hidden">
-                        <p className="text-xs text-muted-foreground">Telefono</p>
-                        <p className="font-medium text-foreground truncate">{guestData.phone}</p>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
 

@@ -61,7 +61,7 @@ Il server e `npm run db:push` leggono il file `.env` nella cartella del progetto
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | no | Chiavi di [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) (gratuito) per la verifica anti-bot sulle prenotazioni del widget. Vanno impostate entrambe o nessuna; senza chiavi resta attivo solo il campo trappola nascosto |
 | `GUEST_DATA_RETENTION_MONTHS` | no | Mesi dopo il check-out oltre i quali i dati personali degli ospiti vengono anonimizzati (default `24`). Il controllo gira all'avvio e poi una volta al giorno |
 | `PORT` | no | Porta del server (default `5000`) |
-| `TEST_DATABASE_URL` | solo per `npm test` | Database PostgreSQL usa e getta per i test. I test ne cancellano tutti i dati: non usare mai un database con dati veri |
+| `TEST_DATABASE_URL` | solo per `npm test` e `npm run test:e2e` | Database PostgreSQL usa e getta per i test. I test ne cancellano tutti i dati: non usare mai un database con dati veri |
 
 ### Script
 
@@ -72,6 +72,7 @@ Il server e `npm run db:push` leggono il file `.env` nella cartella del progetto
 | `npm run start` | Avvia la build di produzione |
 | `npm run check` | Controllo dei tipi TypeScript |
 | `npm test` | Test di integrazione su un database reale (richiede `TEST_DATABASE_URL`) |
+| `npm run test:e2e` | Test end-to-end dell'interfaccia con Playwright (richiede `TEST_DATABASE_URL`; la prima volta esegui `npx playwright install chromium`) |
 | `npm run db:push` | Applica lo schema al database con Drizzle Kit |
 | `npm run db:claim-legacy -- <email>` | Assegna all'account indicato le strutture create prima dell'autenticazione |
 
@@ -112,16 +113,13 @@ client/      Frontend React (pagine, componenti, widget.js)
 server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, env.ts, turnstile.ts, log-error.ts, claim-legacy.ts, retention.ts, app.ts, index.ts
 shared/      Schema Drizzle e schemi Zod condivisi
 tests/       Test di integrazione (node:test) sulle API
+e2e/         Test end-to-end dell'interfaccia (Playwright)
 migrations/  Migrazioni generate da Drizzle Kit
 ```
 
 ### Problemi noti
 
-Elenco da risolvere. Ordinato per gravità.
-
-**Qualità e manutenzione**
-
-1. **Nessun test sul frontend:** i test coprono le API, non l'interfaccia.
+Nessun problema noto aperto. Segnala bug e proposte nelle [issue](https://github.com/Luke2986/Hospitality-Management/issues).
 
 ### Aggiornare da una versione senza account
 
@@ -151,10 +149,10 @@ Avvia i comandi dalla cartella del progetto, così viene letto il file `.env`; i
 Il progetto è aperto: chiunque può fare fork, migliorarlo e proporre modifiche.
 
 1. Fai fork del repository e crea un branch per la tua modifica.
-2. Verifica che `npm run check` e `npm test` passino: la CI di GitHub li esegue su ogni pull request.
+2. Verifica che `npm run check`, `npm test` e `npm run test:e2e` passino: la CI di GitHub li esegue su ogni pull request.
 3. Apri una pull request spiegando cosa cambia e perché.
 
-La lista dei [problemi noti](#problemi-noti) è un buon punto di partenza.
+Le [issue aperte](https://github.com/Luke2986/Hospitality-Management/issues) sono un buon punto di partenza.
 
 ### Licenza
 
@@ -229,7 +227,7 @@ The server and `npm run db:push` read the `.env` file in the project folder (see
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | no | [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) keys (free) for bot protection on widget bookings. Set both or neither; without them only the hidden honeypot field is active |
 | `GUEST_DATA_RETENTION_MONTHS` | no | Months after check-out after which guests' personal data is anonymized (default `24`). The check runs at startup and then once a day |
 | `PORT` | no | Server port (default `5000`) |
-| `TEST_DATABASE_URL` | only for `npm test` | Disposable PostgreSQL database for the tests. The tests wipe all its data: never point it at real data |
+| `TEST_DATABASE_URL` | only for `npm test` and `npm run test:e2e` | Disposable PostgreSQL database for the tests. The tests wipe all its data: never point it at real data |
 
 ### Scripts
 
@@ -240,6 +238,7 @@ The server and `npm run db:push` read the `.env` file in the project folder (see
 | `npm run start` | Run the production build |
 | `npm run check` | TypeScript type check |
 | `npm test` | Integration tests against a real database (needs `TEST_DATABASE_URL`) |
+| `npm run test:e2e` | End-to-end UI tests with Playwright (needs `TEST_DATABASE_URL`; the first time run `npx playwright install chromium`) |
 | `npm run db:push` | Push the schema to the database with Drizzle Kit |
 | `npm run db:claim-legacy -- <email>` | Assign properties created before authentication to the given account |
 
@@ -280,16 +279,13 @@ client/      React frontend (pages, components, widget.js)
 server/      Express: auth.ts, email.ts, routes.ts, storage.ts (Drizzle), db.ts, env.ts, turnstile.ts, log-error.ts, claim-legacy.ts, retention.ts, app.ts, index.ts
 shared/      Drizzle schema and shared Zod schemas
 tests/       API integration tests (node:test)
+e2e/         End-to-end UI tests (Playwright)
 migrations/  Migrations generated by Drizzle Kit
 ```
 
 ### Known issues
 
-To be fixed. Ordered by severity.
-
-**Quality and maintenance**
-
-1. **No frontend tests:** the tests cover the API, not the UI.
+No open known issues. Report bugs and ideas in the [issues](https://github.com/Luke2986/Hospitality-Management/issues).
 
 ### Upgrading from a version without accounts
 
@@ -319,10 +315,10 @@ Run the commands from the project folder so the `.env` file is picked up, or set
 The project is open: anyone can fork it, improve it and propose changes.
 
 1. Fork the repository and create a branch for your change.
-2. Make sure `npm run check` and `npm test` pass: GitHub CI runs them on every pull request.
+2. Make sure `npm run check`, `npm test` and `npm run test:e2e` pass: GitHub CI runs them on every pull request.
 3. Open a pull request explaining what changes and why.
 
-The [known issues](#known-issues) list is a good place to start.
+The [open issues](https://github.com/Luke2986/Hospitality-Management/issues) are a good place to start.
 
 ### License
 
